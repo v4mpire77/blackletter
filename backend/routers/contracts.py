@@ -27,7 +27,8 @@ async def review_contract(file: UploadFile):
         pdf = PdfReader(BytesIO(content))
         text = ""
         for page in pdf.pages:
-            text += page.extract_text() + "\n"
+            page_text = page.extract_text() or ""
+            text += page_text + "\n"
             
         # Truncate text to ~6000 chars
         text = text[:6000] + ("..." if len(text) > 6000 else "")
