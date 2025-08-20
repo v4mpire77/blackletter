@@ -33,6 +33,12 @@ setx NEXT_PUBLIC_API_URL "http://localhost:8000"
 npm run dev
 ```
 
+### Contract Ingestion
+
+```powershell
+.\ingest.ps1 -Path ".\samples" -Out ".\data\chunks.jsonl"
+```
+
 ### macOS/Linux Tesseract Setup
 
 If you're running the backend on macOS or Linux, ensure the Tesseract
