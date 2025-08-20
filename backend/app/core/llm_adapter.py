@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import re
 from typing import Optional, Any
 
 try:
@@ -148,7 +149,20 @@ class LLMAdapter:
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
         if self.init_error:
-            return {"summary": "", "risks": [], "dates": [], "error": self.init_error}
+            # Basic heuristic fallback so the system still returns something
+            sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+            summary = " ".join(sentences[:2]).strip()
+            risk_sentences = [
+                s.strip()
+                for s in sentences[2:]
+                if re.search(r"\b(shall|must|obligation|liability|indemnify|terminate)\b", s, re.I)
+            ]
+            return {
+                "summary": summary,
+                "risks": risk_sentences[:5],
+                "dates": [],
+                "error": self.init_error,
+            }
 
         # Prefer provider, but fall back gracefully if unavailable
         if self.provider == "openai":

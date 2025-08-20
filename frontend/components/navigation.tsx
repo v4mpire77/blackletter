@@ -13,12 +13,17 @@ export function Navigation() {
       label: 'Upload',
       active: pathname === '/upload',
     },
-    {
-      href: '/dashboard', 
-      label: 'Dashboard',
-      active: pathname === '/dashboard',
-    },
-  ];
+      {
+        href: '/dashboard',
+        label: 'Dashboard',
+        active: pathname === '/dashboard',
+      },
+      {
+        href: '/qa',
+        label: 'Ask',
+        active: pathname === '/qa',
+      },
+    ];
 
   return (
     <nav className="bg-gray-800 border-b border-gray-700">

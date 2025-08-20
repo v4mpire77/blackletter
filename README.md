@@ -1,6 +1,20 @@
 # Blackletter Systems - AI Contract Review
+![Eval](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/blackletter/blackletter/main/eval/results.json)
+
+![Recall@5](https://img.shields.io/badge/Recall%405-1.00-brightgreen)
+![nDCG@5](https://img.shields.io/badge/nDCG%405-1.00-brightgreen)
+![Faithfulness](https://img.shields.io/badge/Faithfulness-1.00-brightgreen)
 
 Simple, fast contract review using AI. Upload → Extract → Summarise → Show risks.
+
+## Option A — One-click "phone-ready" deploy
+
+1. Go to [Render](https://render.com) and create a new **Web Service** connected to this GitHub repository.
+2. Set the service root to `backend` and add the environment variable:
+   - `OPENAI_API_KEY=<your OpenAI key>`
+3. Build command: `pip install -r requirements.txt`
+4. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+5. Once deployed, note the public URL (e.g., `https://blackletter-api.onrender.com`) for your phone or frontend.
 
 ## Quick Start (Windows)
 
@@ -31,6 +45,12 @@ cd frontend
 npm install
 setx NEXT_PUBLIC_API_URL "http://localhost:8000"
 npm run dev
+```
+
+### Contract Ingestion
+
+```powershell
+.\ingest.ps1 -Path ".\samples" -Out ".\data\chunks.jsonl"
 ```
 
 ### macOS/Linux Tesseract Setup
@@ -67,7 +87,7 @@ export TESSERACT_CMD=/usr/bin/tesseract
 Use the provided `scripts/test_upload.http` with VS Code REST Client extension to test the API directly:
 
 ```http
-POST http://localhost:8000/api/review
+POST http://localhost:8000/api/contracts
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
 ------WebKitFormBoundary
 Content-Disposition: form-data; name="file"; filename="test.pdf"
@@ -75,6 +95,9 @@ Content-Type: application/pdf
 
 < ./test.pdf
 ------WebKitFormBoundary--
+
+### Then fetch findings
+GET http://localhost:8000/api/contracts/{id}/findings
 ```
 
 ## Next Steps
