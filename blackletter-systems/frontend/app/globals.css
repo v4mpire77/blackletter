@@ -60,3 +60,80 @@ h2 { color: var(--muted); margin-top: 20px; }
 }
 
 .home-link { display:inline-block; margin-top:8px; padding:6px 10px; background:#eef2ff; color:var(--accent); border-radius:8px; text-decoration:none; }
+
+/* Analysis results styling */
+.results {
+  margin-top: 2rem;
+}
+
+.file-info {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.file-info p {
+  margin: 0.5rem 0;
+}
+
+.issues-list {
+  margin-top: 1rem;
+}
+
+.issue-card {
+  border-left: 4px solid;
+  padding: 1rem;
+  margin: 1rem 0;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.issue-card h4 {
+  margin: 0 0 0.5rem 0;
+}
+
+.issue-metadata {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.severity-badge {
+  padding: 0.2rem 0.5rem;
+  color: white;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.severity-high {
+  background-color: red;
+}
+
+.severity-medium {
+  background-color: orange;
+}
+
+.severity-low {
+  background-color: blue;
+}
+
+.issue-description {
+  margin: 0.5rem 0;
+}
+
+.issue-remediation {
+  margin-top: 0.5rem;
+}
+
+.error-message {
+  color: red;
+  margin-top: 1rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+}
