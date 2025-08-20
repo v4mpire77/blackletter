@@ -152,33 +152,57 @@ export default function Dashboard() {
     });
   }, [issues, searchTerm, typeFilter, severityFilter, statusFilter, gdprFocus, hideResolved]);
 
-  // Calculate KPIs
-  const kpis = useMemo(() => {
-    const uniqueDocs = new Set(filteredIssues.map(i => i.docId)).size;
-    const avgConfidence = filteredIssues.length > 0
-      ? filteredIssues.reduce((sum, i) => sum + i.confidence, 0) / filteredIssues.length
-      : 0;
-    
+  // Aggregate stats for KPIs and charts
+  const aggregates = useMemo(() => {
+    const result = filteredIssues.reduce(
+      (
+        acc,
+        issue
+      ) => {
+        acc.uniqueDocs.add(issue.docId);
+        acc.severityCounts[issue.severity] += 1;
+        acc.typeCounts[issue.type] += 1;
+        acc.confidenceSum += issue.confidence;
+        return acc;
+      },
+      {
+        uniqueDocs: new Set<string>(),
+        severityCounts: { High: 0, Medium: 0, Low: 0 },
+        typeCounts: { GDPR: 0, Statute: 0, "Case Law": 0 },
+        confidenceSum: 0,
+      }
+    );
+
     return {
-      totalDocs: uniqueDocs,
-      high: filteredIssues.filter(i => i.severity === "High").length,
-      medium: filteredIssues.filter(i => i.severity === "Medium").length,
-      low: filteredIssues.filter(i => i.severity === "Low").length,
-      avgConfidence
+      totalDocs: result.uniqueDocs.size,
+      severityCounts: result.severityCounts,
+      typeCounts: result.typeCounts,
+      avgConfidence:
+        filteredIssues.length > 0
+          ? result.confidenceSum / filteredIssues.length
+          : 0,
     };
   }, [filteredIssues]);
 
+  const kpis = {
+    totalDocs: aggregates.totalDocs,
+    high: aggregates.severityCounts.High,
+    medium: aggregates.severityCounts.Medium,
+    low: aggregates.severityCounts.Low,
+    avgConfidence: aggregates.avgConfidence,
+  };
+
   // Chart data
   const distByType = [
-    { name: "GDPR", value: filteredIssues.filter(i => i.type === "GDPR").length },
-    { name: "Statute", value: filteredIssues.filter(i => i.type === "Statute").length },
-    { name: "Case Law", value: filteredIssues.filter(i => i.type === "Case Law").length },
+    { name: "GDPR", value: aggregates.typeCounts.GDPR },
+    { name: "Statute", value: aggregates.typeCounts.Statute },
+    { name: "Case Law", value: aggregates.typeCounts["Case Law"] },
   ];
 
   const distBySeverity = [
-    { name: "High", value: kpis.high, color: "#ef4444" },
-    { name: "Medium", value: kpis.medium, color: "#f59e0b" },
-    { name: "Low", value: kpis.low, color: "#10b981" },
+    { name: "High", value: aggregates.severityCounts.High, color: "#ef4444" },
+    { name: "Medium", value: aggregates.severityCounts.Medium, color: "#f59e0b" },
+    { name: "Low", value: aggregates.severityCounts.Low, color: "#10b981" },
   ];
 
   // Helper function
