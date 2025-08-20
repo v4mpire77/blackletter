@@ -2,9 +2,14 @@
 
 import { useState } from 'react';
 
+interface ReviewResult {
+  summary: string;
+  risks: string[];
+}
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<ReviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,17 +24,20 @@ export default function Home() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/api/analyze-contract', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/review`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         throw new Error(await response.text());
       }
 
-      const data = await response.json();
-      setAnalysis(data.analysis);
+      const data: ReviewResult = await response.json();
+      setAnalysis(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -68,9 +76,14 @@ export default function Home() {
       {analysis && (
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Analysis Results</h2>
-          <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded-md">
-            {JSON.stringify(analysis, null, 2)}
-          </pre>
+          <h3 className="font-medium mb-2">Summary</h3>
+          <p className="mb-4">{analysis.summary}</p>
+          <h3 className="font-medium mb-2">Key Risks</h3>
+          <ul className="list-disc pl-5 space-y-1">
+            {analysis.risks.map((risk, idx) => (
+              <li key={idx}>{risk}</li>
+            ))}
+          </ul>
         </div>
       )}
     </main>
