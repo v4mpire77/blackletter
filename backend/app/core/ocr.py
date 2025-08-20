@@ -35,12 +35,12 @@ class OCRProcessor:
                     # If page has little or no text, try OCR on the page image
                     if len(text.strip()) < 50:  # Arbitrary threshold
                         img = page.to_image()
-                        # Convert to PIL Image
-                        pil_image = Image.frombytes(
-                            mode='RGB',
-                            size=(img.width, img.height),
-                            data=img.original.tobytes()
-                        )
+                        # pdfplumber's PageImage exposes the underlying PIL image via
+                        # the "original" attribute. The previous approach attempted to
+                        # rebuild the image from raw bytes and referenced attributes that
+                        # do not exist on PageImage, causing an AttributeError. Using the
+                        # original image directly avoids this issue.
+                        pil_image = img.original if hasattr(img, "original") else img
                         # Perform OCR
                         text = pytesseract.image_to_string(pil_image) or ""
                     
