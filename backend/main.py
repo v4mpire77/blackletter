@@ -17,6 +17,12 @@ app.add_middleware(
 app.include_router(contracts.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 
+# Root route for basic status check
+@app.get("/")
+async def root():
+    """Root endpoint returning a simple status message."""
+    return {"status": "Blackletter Systems API running"}
+
 # Health check
 @app.get("/health")
 async def health_check():
