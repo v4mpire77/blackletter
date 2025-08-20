@@ -7,7 +7,7 @@ app = FastAPI(title="Blackletter Systems API")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,8 +20,12 @@ app.include_router(dashboard.router, prefix="/api")
 # Root route for basic status check
 @app.get("/")
 async def root():
-    """Root endpoint returning a simple status message."""
-    return {"status": "Blackletter Systems API running"}
+    """Provide a simple landing response with service info."""
+    return {
+        "service": "blackletter-backend",
+        "status": "ok",
+        "docs": "/docs",
+    }
 
 # Health check
 @app.get("/health")
