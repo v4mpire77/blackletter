@@ -8,7 +8,8 @@
     "start": "node dist/index.js",
     "lint": "eslint .",
     "assurance:eval": "ts-node src/scripts/assurance_eval.ts",
-    "status:generate": "ts-node src/scripts/status_generate.ts"
+    "status:generate": "ts-node src/scripts/status_generate.ts",
+    "findings:stamp": "ts-node src/scripts/stamp_findings.ts"
   },
   "dependencies": {
     "express": "^4.19.2",
