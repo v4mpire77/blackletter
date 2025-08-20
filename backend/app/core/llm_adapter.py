@@ -18,19 +18,26 @@ import httpx
 
 
 class LLMAdapter:
-    """Async adapter supporting OpenAI and Ollama (HTTP fallback).
+    """Async adapter supporting OpenAI, Gemini, and Ollama (HTTP fallback).
 
-    It prefers OpenAI when LLM_PROVIDER=openai and OPENAI_API_KEY is set. For Ollama it will
-    try the python package then fall back to the HTTP API at OLLAMA_BASE_URL.
+    It prefers OpenAI when ``LLM_PROVIDER=openai`` and ``OPENAI_API_KEY`` is set. For
+    Gemini, set ``LLM_PROVIDER=gemini`` with ``GEMINI_API_KEY``. For Ollama it will try
+    the python package then fall back to the HTTP API at ``OLLAMA_BASE_URL``.
     """
 
     def __init__(self):
         self.provider = os.getenv("LLM_PROVIDER", "ollama")
-        self.model = os.getenv(
-            "DEFAULT_LLM", "llama3.1:8b" if self.provider == "ollama" else "gpt-4"
-        )
+        if self.provider == "gemini":
+            default_model = "gemini-2.0-flash"
+        elif self.provider == "openai":
+            default_model = "gpt-4"
+        else:
+            default_model = "llama3.1:8b"
+        self.model = os.getenv("DEFAULT_LLM", default_model)
+
         self.ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.openai_key = os.getenv("OPENAI_API_KEY")
+        self.gemini_key = os.getenv("GEMINI_API_KEY")
 
         # Check whether an Ollama server is reachable
         self.ollama_reachable = self._ollama_ready()
@@ -40,9 +47,15 @@ class LLMAdapter:
 
         # Record a clear error if neither backend is available
         self.init_error: Optional[str] = None
-        if not self.openai_key and not self.ollama_reachable:
+        if self.provider == "openai" and not self.openai_key:
+            self.init_error = "OPENAI_API_KEY is missing."
+        elif self.provider == "gemini" and not self.gemini_key:
+            self.init_error = "GEMINI_API_KEY is missing."
+        elif self.provider == "ollama" and not self.ollama_reachable:
+            self.init_error = f"Ollama server not reachable at {self.ollama_base}."
+        elif not any([self.openai_key, self.gemini_key, self.ollama_reachable]):
             self.init_error = (
-                f"No LLM backend configured. Set OPENAI_API_KEY or start an Ollama server at {self.ollama_base}."
+                f"No LLM backend configured. Set OPENAI_API_KEY or GEMINI_API_KEY or start an Ollama server at {self.ollama_base}."
             )
 
     def _ollama_ready(self) -> bool:
@@ -85,6 +98,26 @@ class LLMAdapter:
             return str(resp or "")
 
         return await asyncio.to_thread(sync_call)
+
+    async def _call_gemini(self, messages: list) -> str:
+        if not self.gemini_key:
+            raise RuntimeError("GEMINI_API_KEY is missing")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+        contents = []
+        for msg in messages:
+            contents.append({"role": msg["role"], "parts": [{"text": msg["content"]}]})
+        payload = {"contents": contents}
+        headers = {"X-goog-api-key": self.gemini_key}
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(url, json=payload, headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        return (
+            data.get("candidates", [{}])[0]
+            .get("content", {})
+            .get("parts", [{}])[0]
+            .get("text", "")
+        )
 
     async def _call_ollama(self, messages: list) -> str:
         # Prefer python client if available
@@ -168,6 +201,8 @@ class LLMAdapter:
         if self.provider == "openai":
             if self.openai_key and openai is not None:
                 resp = await self._call_openai(messages)
+            elif self.gemini_key:
+                resp = await self._call_gemini(messages)
             elif self.ollama_reachable:
                 resp = await self._call_ollama(messages)
             else:
@@ -175,13 +210,29 @@ class LLMAdapter:
                     "summary": "",
                     "risks": [],
                     "dates": [],
-                    "error": f"OPENAI_API_KEY is missing and no Ollama server reachable at {self.ollama_base}.",
+                    "error": f"OPENAI_API_KEY is missing and no fallback LLM available.",
+                }
+        elif self.provider == "gemini":
+            if self.gemini_key:
+                resp = await self._call_gemini(messages)
+            elif self.openai_key and openai is not None:
+                resp = await self._call_openai(messages)
+            elif self.ollama_reachable:
+                resp = await self._call_ollama(messages)
+            else:
+                return {
+                    "summary": "",
+                    "risks": [],
+                    "dates": [],
+                    "error": f"GEMINI_API_KEY is missing and no fallback LLM available.",
                 }
         else:
             if self.ollama_reachable:
                 resp = await self._call_ollama(messages)
             elif self.openai_key and openai is not None:
                 resp = await self._call_openai(messages)
+            elif self.gemini_key:
+                resp = await self._call_gemini(messages)
             else:
                 return {
                     "summary": "",
