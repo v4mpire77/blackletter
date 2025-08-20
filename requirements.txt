@@ -3,6 +3,7 @@ openai
 pydantic
 fastapi
 uvicorn
+python-multipart
 pypdf
 python-docx
 tiktoken
