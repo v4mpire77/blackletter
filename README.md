@@ -1,4 +1,5 @@
 # Blackletter Systems - AI Contract Review
+![Eval](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/blackletter/blackletter/main/eval/results.json)
 
 Simple, fast contract review using AI. Upload → Extract → Summarise → Show risks.
 
