@@ -5,6 +5,8 @@ import json
 import re
 import json
 import asyncio
+import uuid
+from typing import Dict
 from ..app.core.llm_adapter import LLMAdapter
 from ..models.schemas import ReviewResult
 
@@ -149,3 +151,34 @@ async def review_contract(file: UploadFile):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {e}")
+
+
+# In-memory storage for uploaded contracts
+contracts_store: Dict[str, ReviewResult] = {}
+
+
+@router.post("/contracts")
+async def create_contract(file: UploadFile):
+    """Upload a contract and run checks."""
+    result = await review_contract(file)
+    contract_id = str(uuid.uuid4())
+    contracts_store[contract_id] = result
+    return {"id": contract_id}
+
+
+@router.get("/contracts/{contract_id}/findings", response_model=ReviewResult)
+async def get_contract_findings(contract_id: str):
+    result = contracts_store.get(contract_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    return result
+
+
+@router.get("/contracts/{contract_id}/report")
+async def get_contract_report(contract_id: str):
+    result = contracts_store.get(contract_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    lines = ["# Contract Report", "", "## Summary", result.summary, "", "## Key Risks"]
+    lines.extend(f"- {r}" for r in result.risks)
+    return {"report": "\n".join(lines)}

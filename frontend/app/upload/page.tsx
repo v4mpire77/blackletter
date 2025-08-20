@@ -36,17 +36,21 @@ export default function UploadPage() {
     formData.append('file', file);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/review`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const uploadRes = await fetch(`${apiBase}/api/contracts`, {
         method: 'POST',
         body: formData,
       });
-
-      if (!res.ok) {
-        throw new Error(await res.text());
+      if (!uploadRes.ok) {
+        throw new Error(await uploadRes.text());
       }
-
-      const data = await res.json();
-      setResult(data);
+      const { id } = await uploadRes.json();
+      const findingsRes = await fetch(`${apiBase}/api/contracts/${id}/findings`);
+      if (!findingsRes.ok) {
+        throw new Error(await findingsRes.text());
+      }
+      const data = await findingsRes.json();
+      setResult({ ...data, reportUrl: `${apiBase}/api/contracts/${id}/report` });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -212,7 +216,17 @@ export default function UploadPage() {
                   </div>
 
                   <div className="pt-4 border-t border-gray-700">
-                    <div className="flex flex-wrap items-center gap-2">
+                    {result.reportUrl && (
+                      <a
+                        href={result.reportUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 underline text-xs"
+                      >
+                        View report
+                      </a>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
                       <button
                         onClick={downloadJSON}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs transition-colors"
