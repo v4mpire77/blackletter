@@ -5,6 +5,7 @@ import uuid
 from pypdf import PdfReader
 from io import BytesIO
 import json
+import asyncio
 
 from ..models.schemas import Issue
 
@@ -80,13 +81,16 @@ async def analyze_contract(file: UploadFile):
         if len(content) > 10 * 1024 * 1024:  # 10MB
             raise HTTPException(status_code=400, detail="File too large (max 10MB)")
 
-        # Extract text from PDF
-        pdf = PdfReader(BytesIO(content))
-        text_parts = []
-        for page in pdf.pages:
-            t = page.extract_text() or ""
-            text_parts.append(t)
-        text = "\n\n".join(text_parts).strip()
+        # Extract text from PDF in a background thread
+        def _extract(data: bytes) -> str:
+            pdf = PdfReader(BytesIO(data))
+            text_parts = []
+            for page in pdf.pages:
+                t = page.extract_text() or ""
+                text_parts.append(t)
+            return "\n\n".join(text_parts).strip()
+
+        text = await asyncio.to_thread(_extract, content)
 
         if not text:
             raise HTTPException(status_code=400, detail="No extractable text found in PDF")
