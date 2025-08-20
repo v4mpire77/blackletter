@@ -12,6 +12,8 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<ReviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reportUrl, setReportUrl] = useState<string | null>(null);
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,20 +26,21 @@ export default function Home() {
     formData.append('file', file);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/review`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(await response.text());
+      const uploadRes = await fetch(`${apiBase}/api/contracts`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!uploadRes.ok) {
+        throw new Error(await uploadRes.text());
       }
-
-      const data: ReviewResult = await response.json();
+      const { id } = await uploadRes.json();
+      const findingsRes = await fetch(`${apiBase}/api/contracts/${id}/findings`);
+      if (!findingsRes.ok) {
+        throw new Error(await findingsRes.text());
+      }
+      const data: ReviewResult = await findingsRes.json();
       setAnalysis(data);
+      setReportUrl(`${apiBase}/api/contracts/${id}/report`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -84,6 +87,16 @@ export default function Home() {
               <li key={idx}>{risk}</li>
             ))}
           </ul>
+          {reportUrl && (
+            <a
+              href={reportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline block mt-4"
+            >
+              View report
+            </a>
+          )}
         </div>
       )}
     </main>

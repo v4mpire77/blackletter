@@ -73,7 +73,7 @@ export TESSERACT_CMD=/usr/bin/tesseract
 Use the provided `scripts/test_upload.http` with VS Code REST Client extension to test the API directly:
 
 ```http
-POST http://localhost:8000/api/review
+POST http://localhost:8000/api/contracts
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
 ------WebKitFormBoundary
 Content-Disposition: form-data; name="file"; filename="test.pdf"
@@ -81,6 +81,9 @@ Content-Type: application/pdf
 
 < ./test.pdf
 ------WebKitFormBoundary--
+
+### Then fetch findings
+GET http://localhost:8000/api/contracts/{id}/findings
 ```
 
 ## Next Steps
