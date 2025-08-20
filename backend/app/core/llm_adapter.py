@@ -13,7 +13,7 @@ try:
 except Exception:
     ollama = None
 
-import requests
+import httpx
 
 
 class LLMAdapter:
@@ -48,7 +48,7 @@ class LLMAdapter:
         """Check if an Ollama server responds to a simple request."""
         try:
             url = self.ollama_base.rstrip("/") + "/api/tags"
-            requests.get(url, timeout=2)
+            httpx.get(url, timeout=2)
             return True
         except Exception:
             return False
@@ -118,7 +118,10 @@ class LLMAdapter:
 
         # Fallback to HTTP
         url = self.ollama_base.rstrip("/") + "/api/chat"
-        resp = requests.post(url, json={"model": self.model, "messages": messages}, timeout=30)
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                url, json={"model": self.model, "messages": messages}, timeout=30
+            )
         resp.raise_for_status()
         body = resp.json()
         if isinstance(body, dict):
