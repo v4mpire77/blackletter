@@ -7,6 +7,15 @@
 
 Simple, fast contract review using AI. Upload → Extract → Summarise → Show risks.
 
+## Option A — One-click "phone-ready" deploy
+
+1. Go to [Render](https://render.com) and create a new **Web Service** connected to this GitHub repository.
+2. Set the service root to `backend` and add the environment variable:
+   - `OPENAI_API_KEY=<your OpenAI key>`
+3. Build command: `pip install -r requirements.txt`
+4. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+5. Once deployed, note the public URL (e.g., `https://blackletter-api.onrender.com`) for your phone or frontend.
+
 ## Quick Start (Windows)
 
 ### Backend Setup
