@@ -46,3 +46,35 @@ def test_generate_answer_with_mock(monkeypatch):
     assert res["answer"] == "Answer."
     assert len(res["citations"]) == 2
     assert res["confidence"] == 0.8
+
+
+def test_preserves_existing_citations(monkeypatch):
+    """If the model returns a single citation, it should be kept and a
+    second one should be added from the remaining context."""
+
+    def fake_create(model, input):
+        payload = {
+            "answer": "Answer.",
+            "citations": [{"source_id": "A", "page": 1, "quote": "foo"}],
+            "confidence": 0.9,
+        }
+        return SimpleNamespace(
+            output=[
+                SimpleNamespace(content=[SimpleNamespace(text=json.dumps(payload))])
+            ]
+        )
+
+    class FakeClient:
+        def __init__(self):
+            self.responses = SimpleNamespace(create=fake_create)
+
+    monkeypatch.setattr(rag, "OpenAI", lambda: FakeClient())
+
+    contexts = [
+        {"source_id": "A", "page": 1, "content": "foo", "score": 0.9},
+        {"source_id": "B", "page": 2, "content": "bar", "score": 0.8},
+    ]
+    res = rag.generate_answer("question", contexts)
+    assert len(res["citations"]) == 2
+    assert res["citations"][0]["source_id"] == "A"
+    assert res["citations"][1]["source_id"] == "B"

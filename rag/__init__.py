@@ -71,18 +71,30 @@ def generate_answer(
             "confidence": 0.0,
         }
 
-    # Enforce at least two citations when possible
+    # Enforce at least two citations when possible while preserving any
+    # citations returned by the model. We append missing citations from the
+    # available contexts without duplicating sources that are already cited.
     citations = data.get("citations", [])
     if len(citations) < 2:
-        top = contexts[:2]
-        data["citations"] = [
-            {
-                "source_id": c["source_id"],
-                "page": c["page"],
-                "quote": c["content"][:200],
-            }
-            for c in top
-        ]
+        seen = {
+            (c.get("source_id"), c.get("page"))
+            for c in citations
+            if c.get("source_id") is not None and c.get("page") is not None
+        }
+        for c in contexts:
+            key = (c["source_id"], c["page"])
+            if key not in seen:
+                citations.append(
+                    {
+                        "source_id": c["source_id"],
+                        "page": c["page"],
+                        "quote": c["content"][:200],
+                    }
+                )
+                seen.add(key)
+            if len(citations) >= 2:
+                break
+        data["citations"] = citations
 
     data.setdefault("confidence", float(best_score))
     return data
