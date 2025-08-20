@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import contracts
+from .routers import contracts, dashboard
 
 app = FastAPI(title="Blackletter Systems API")
 
@@ -15,6 +15,7 @@ app.add_middleware(
 
 # Mount routers
 app.include_router(contracts.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
 
 # Health check
 @app.get("/health")
