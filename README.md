@@ -7,12 +7,21 @@ Simple, fast contract review using AI. Upload → Extract → Summarise → Show
 ### Backend Setup
 
 ```powershell
+# Start the default Ollama server (https://ollama.ai)
+ollama serve
+
 cd blackletter\backend
 python -m venv ..\.venv
 . ..\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-setx OPENAI_API_KEY "<YOUR_KEY>"
 uvicorn main:app --reload --port 8000
+```
+
+To use OpenAI instead of Ollama:
+
+```powershell
+setx LLM_PROVIDER "openai"
+setx OPENAI_API_KEY "<YOUR_KEY>"
 ```
 
 ### Frontend Setup
@@ -22,6 +31,20 @@ cd frontend
 npm install
 setx NEXT_PUBLIC_API_URL "http://localhost:8000"
 npm run dev
+```
+
+### macOS/Linux Tesseract Setup
+
+If you're running the backend on macOS or Linux, ensure the Tesseract
+binary is installed and set the `TESSERACT_CMD` environment variable so
+`pytesseract` can locate it:
+
+```bash
+# macOS (Homebrew)
+export TESSERACT_CMD=/usr/local/bin/tesseract
+
+# Linux
+export TESSERACT_CMD=/usr/bin/tesseract
 ```
 
 ## System Constraints

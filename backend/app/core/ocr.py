@@ -3,11 +3,24 @@ import pdfplumber
 import pytesseract
 from PIL import Image
 import io
+import os
+import platform
 
 class OCRProcessor:
     def __init__(self):
-        # Configure pytesseract path for Windows
-        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        """Configure pytesseract based on the current platform."""
+        tesseract_cmd = os.getenv("TESSERACT_CMD")
+
+        if not tesseract_cmd:
+            system = platform.system()
+            if system == "Windows":
+                tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+            elif system == "Darwin":  # macOS
+                tesseract_cmd = "/usr/local/bin/tesseract"
+            else:  # Assume Linux/Unix
+                tesseract_cmd = "/usr/bin/tesseract"
+
+        pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
     async def extract_text(self, file_content: bytes) -> str:
         """Extract text from a PDF file using pdfplumber and pytesseract for images."""
