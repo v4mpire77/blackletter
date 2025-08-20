@@ -1,0 +1,29 @@
+name: Evaluation
+
+on:
+  pull_request:
+    paths:
+      - '**'
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run evaluation
+        shell: pwsh
+        run: ./evaluate.ps1 -Fixtures "./fixtures" -Rules "./rules" -Out "./eval/results.json"
+      - name: Check regression
+        shell: pwsh
+        run: |
+          $baseline = Get-Content ./eval/baseline.json | ConvertFrom-Json
+          $results = Get-Content ./eval/results.json | ConvertFrom-Json
+          $fail = $false
+          foreach ($key in $baseline.results.Keys) {
+            $b=$baseline.results[$key]; $r=$results.results[$key]
+            if (($b.precision - $r.precision) -gt 0.05 -or ($b.recall - $r.recall) -gt 0.05) {
+              Write-Host "Regression in $key"
+              $fail = $true
+            }
+          }
+          if ($fail) { exit 1 }
