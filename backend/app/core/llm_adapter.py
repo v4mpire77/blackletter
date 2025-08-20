@@ -25,13 +25,33 @@ class LLMAdapter:
 
     def __init__(self):
         self.provider = os.getenv("LLM_PROVIDER", "ollama")
-        self.model = os.getenv("DEFAULT_LLM", "llama3.1:8b" if self.provider == "ollama" else "gpt-4")
+        self.model = os.getenv(
+            "DEFAULT_LLM", "llama3.1:8b" if self.provider == "ollama" else "gpt-4"
+        )
         self.ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        self.openai_key = os.getenv("OPENAI_API_KEY")
 
-        if self.provider == "openai" and openai is not None:
-            key = os.getenv("OPENAI_API_KEY")
-            if key:
-                openai.api_key = key
+        # Check whether an Ollama server is reachable
+        self.ollama_reachable = self._ollama_ready()
+
+        if self.provider == "openai" and openai is not None and self.openai_key:
+            openai.api_key = self.openai_key
+
+        # Record a clear error if neither backend is available
+        self.init_error: Optional[str] = None
+        if not self.openai_key and not self.ollama_reachable:
+            self.init_error = (
+                f"No LLM backend configured. Set OPENAI_API_KEY or start an Ollama server at {self.ollama_base}."
+            )
+
+    def _ollama_ready(self) -> bool:
+        """Check if an Ollama server responds to a simple request."""
+        try:
+            url = self.ollama_base.rstrip("/") + "/api/tags"
+            requests.get(url, timeout=2)
+            return True
+        except Exception:
+            return False
 
     async def _call_openai(self, messages: list) -> str:
         if openai is None:
@@ -124,10 +144,34 @@ class LLMAdapter:
         user = f"{prompt}\nText: {text}"
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
+        if self.init_error:
+            return {"summary": "", "risks": [], "dates": [], "error": self.init_error}
+
+        # Prefer provider, but fall back gracefully if unavailable
         if self.provider == "openai":
-            resp = await self._call_openai(messages)
+            if self.openai_key and openai is not None:
+                resp = await self._call_openai(messages)
+            elif self.ollama_reachable:
+                resp = await self._call_ollama(messages)
+            else:
+                return {
+                    "summary": "",
+                    "risks": [],
+                    "dates": [],
+                    "error": f"OPENAI_API_KEY is missing and no Ollama server reachable at {self.ollama_base}.",
+                }
         else:
-            resp = await self._call_ollama(messages)
+            if self.ollama_reachable:
+                resp = await self._call_ollama(messages)
+            elif self.openai_key and openai is not None:
+                resp = await self._call_openai(messages)
+            else:
+                return {
+                    "summary": "",
+                    "risks": [],
+                    "dates": [],
+                    "error": self.init_error,
+                }
 
         # Attempt to parse JSON
         try:
