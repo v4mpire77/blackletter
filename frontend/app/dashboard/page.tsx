@@ -116,6 +116,31 @@ export default function Dashboard() {
   const [gdprFocus, setGdprFocus] = useState(false);
   const [hideResolved, setHideResolved] = useState(false);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
+  const [explanations, setExplanations] = useState<Record<string, { reasoning: string; citations: { source: string; url: string }[] }>>({});
+  const ragApi = process.env.NEXT_PUBLIC_RAG_URL || 'http://localhost:8001';
+
+  async function fetchExplanation(id: string) {
+    if (explanations[id]) return;
+    try {
+      const res = await fetch(`${ragApi}/rag/explain-finding`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finding_id: id })
+      });
+      const data = await res.json();
+      setExplanations(prev => ({ ...prev, [id]: data }));
+    } catch (err) {
+      // ignore errors for demo
+    }
+  }
+
+  useEffect(() => {
+    issues.forEach((i) => {
+      if (!explanations[i.id]) {
+        fetchExplanation(i.id);
+      }
+    });
+  }, [issues]);
 
   // Check API health
   useEffect(() => {
@@ -467,6 +492,7 @@ export default function Dashboard() {
                                   <TabsTrigger value="details">Details</TabsTrigger>
                                   <TabsTrigger value="trace">LLM Trace</TabsTrigger>
                                   <TabsTrigger value="citations">Citations</TabsTrigger>
+                                  <TabsTrigger value="justification">Justification</TabsTrigger>
                                   <TabsTrigger value="history">History</TabsTrigger>
                                 </TabsList>
 
@@ -523,6 +549,31 @@ Assistant: I've identified a high-severity GDPR issue...`}
                                       </div>
                                     </div>
                                   </div>
+                                </TabsContent>
+
+                                <TabsContent value="justification" className="space-y-4">
+                                  {explanations[issue.id] ? (
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label>Reasoning</Label>
+                                        <p className="mt-1 text-sm">{explanations[issue.id].reasoning}</p>
+                                      </div>
+                                      <div>
+                                        <Label>Citations</Label>
+                                        <ul className="list-disc list-inside">
+                                          {explanations[issue.id].citations.map((c, i) => (
+                                            <li key={i}>
+                                              <a href={c.url} target="_blank" className="text-blue-500 underline">
+                                                {c.source}
+                                              </a>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-neutral-500">Loading...</p>
+                                  )}
                                 </TabsContent>
 
                                 <TabsContent value="history" className="space-y-4">
