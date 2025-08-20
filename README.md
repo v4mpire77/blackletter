@@ -33,6 +33,20 @@ setx NEXT_PUBLIC_API_URL "http://localhost:8000"
 npm run dev
 ```
 
+### macOS/Linux Tesseract Setup
+
+If you're running the backend on macOS or Linux, ensure the Tesseract
+binary is installed and set the `TESSERACT_CMD` environment variable so
+`pytesseract` can locate it:
+
+```bash
+# macOS (Homebrew)
+export TESSERACT_CMD=/usr/local/bin/tesseract
+
+# Linux
+export TESSERACT_CMD=/usr/bin/tesseract
+```
+
 ## System Constraints
 
 - Max file size: 10MB
