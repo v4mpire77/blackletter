@@ -5,12 +5,7 @@ services:
     region: oregon
     plan: free
     pythonVersion: 3.11.9
-    buildCommand: |
-      python -m pip install --upgrade pip setuptools wheel \
-      && python -m pip install -r backend/requirements.txt \
-      && cd frontend && npm ci \
-      && NEXT_PUBLIC_API_URL=/ npm run export \
-      && cd ..
+    buildCommand: if command -v python3 >/dev/null 2>&1; then PY=python3; else PY=python; fi; $PY -m pip install --upgrade pip setuptools wheel && $PY -m pip install -r backend/requirements.txt && cd frontend && npm ci && NEXT_PUBLIC_API_URL=/ npm run build && cd ..
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: NODE_VERSION

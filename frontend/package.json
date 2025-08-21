@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && next export",
-    "start": "serve out"
+    "build": "next build"
   },
   "engines": { "node": ">=18 <21" },
   "dependencies": {
