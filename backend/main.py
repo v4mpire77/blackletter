@@ -2,11 +2,11 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, RedirectResponse # Added RedirectResponse
-import os # Added import
-from dotenv import load_dotenv # Added import
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse # Combined imports for responses
+import os # Ensure os is imported
+from dotenv import load_dotenv # Ensure load_dotenv is imported
 
-from routers import contracts, issues, coverage, redlines, gemini
+from routers import contracts, issues, coverage, redlines, gemini # Kept comprehensive router imports
 # from .routers import ocr_example  # optional OCR example
 # from .routers import llm_test  # optional
 
@@ -27,10 +27,10 @@ FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), "../frontend/out")
 
 # Mount the frontend static files if the directory exists
 if os.path.exists(FRONTEND_BUILD_DIR):
-    # Mount the main frontend assets
+    # Mount the main frontend assets under /app/
     app.mount("/app", StaticFiles(directory=FRONTEND_BUILD_DIR, html=True), name="app")
 
-    # Send root to the UI
+    # Send root to the UI at /app/
     @app.get("/")
     def root():
         return RedirectResponse("/app")
@@ -43,11 +43,12 @@ if os.path.exists(FRONTEND_BUILD_DIR):
         index_path = os.path.join(FRONTEND_BUILD_DIR, "index.html")
         return FileResponse(index_path)
 
-
+# Health check endpoint
 @app.get("/health")
 def health():
     return {"service": "blackletter", "status": "ok"}
 
+# API Routers
 app.include_router(contracts.router, prefix="/api", tags=["contracts"])
 app.include_router(issues.router,    prefix="/api", tags=["issues"])
 app.include_router(coverage.router,  prefix="/api", tags=["coverage"])
@@ -61,5 +62,8 @@ if ENABLE_OCR:
     try:
         from .routers import ocr
         app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
-    except
-    
+    except ImportError:
+        # OCR dependencies not available - OCR functionality will be disabled
+        pass
+
+# app.include_router(llm_test.router,  prefix="/api", tags=["llm"])
