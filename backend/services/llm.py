@@ -3,7 +3,6 @@ import os
 import logging
 from typing import List, Optional
 
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # --- Gemini ---
 import google.generativeai as genai
