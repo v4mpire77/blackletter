@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { API_URL, apiGet } from '@/lib/api';
 
 interface ReviewResult {
   summary: string;
@@ -13,7 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportUrl, setReportUrl] = useState<string | null>(null);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const apiBase = API_URL;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +35,7 @@ export default function Home() {
         throw new Error(await uploadRes.text());
       }
       const { id } = await uploadRes.json();
-      const findingsRes = await fetch(`${apiBase}/api/contracts/${id}/findings`);
-      if (!findingsRes.ok) {
-        throw new Error(await findingsRes.text());
-      }
-      const data: ReviewResult = await findingsRes.json();
+      const data: ReviewResult = await apiGet(`/api/contracts/${id}/findings`);
       setAnalysis(data);
       setReportUrl(`${apiBase}/api/contracts/${id}/report`);
     } catch (err) {

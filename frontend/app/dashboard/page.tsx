@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { API_URL, apiGet } from "@/lib/api";
 
 interface ContractEntry {
   id: string;
@@ -16,7 +17,7 @@ interface ContractEntry {
 export default function Dashboard() {
   const [file, setFile] = useState<File | null>(null);
   const [contracts, setContracts] = useState<ContractEntry[]>([]);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const apiBase = API_URL;
 
   const runChecks = async () => {
     if (!file) return;
@@ -33,11 +34,7 @@ export default function Dashboard() {
         throw new Error(await uploadRes.text());
       }
       const { id } = await uploadRes.json();
-      const findingsRes = await fetch(`${apiBase}/api/contracts/${id}/findings`);
-      if (!findingsRes.ok) {
-        throw new Error(await findingsRes.text());
-      }
-      const data = await findingsRes.json();
+      const data = await apiGet(`/api/contracts/${id}/findings`);
       entry.id = id;
       entry.status = "done";
       entry.summary = data.summary;
