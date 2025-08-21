@@ -1,0 +1,28 @@
+{
+  "name": "blackletter",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "assurance:eval": "ts-node src/scripts/assurance_eval.ts",
+    "status:generate": "ts-node src/scripts/status_generate.ts",
+    "findings:stamp": "ts-node src/scripts/stamp_findings.ts"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "zod": "^3.23.8",
+    "yaml": "^2.5.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.5.4",
+    "eslint": "^9.7.0",
+    "@types/node": "^20.14.10"
+  }
+}
