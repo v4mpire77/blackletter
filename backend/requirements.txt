@@ -1,7 +1,7 @@
-fastapi
-uvicorn[standard]
-python-multipart
-pydantic
-requests
-python-dotenv
-jinja2
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+python-multipart==0.0.9
+pydantic==2.11.7
+requests==2.32.5
+python-dotenv==1.0.1
+jinja2==3.1.4
