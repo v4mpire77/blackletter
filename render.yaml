@@ -16,3 +16,4 @@ services:
         sync: false
       - key: BACKEND_URL
         value: https://blackletter-backend.onrender.com/review
+status: render services
