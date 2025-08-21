@@ -7,32 +7,43 @@ from app.core.llm_adapter import LLMAdapter
 
 router = APIRouter(prefix="/api", tags=["contracts"])
 
+
 class ReviewResult(BaseModel):
     summary: str
     risks: list[dict]
 
+
 @router.post("/review", response_model=ReviewResult)
 async def review_contract(file: UploadFile = File(...)) -> ReviewResult:
+    """
+    Accepts an uploaded contract (PDF or text).
+    Extracts text, passes it to the LLMAdapter for summarisation + risk flags.
+    Always returns a JSON ReviewResult with summary + risks.
+    """
     data = await file.read()
     if not data:
         raise HTTPException(status_code=400, detail="Empty file")
 
     text = ""
     try:
-        if file.filename.lower().endswith(".pdf"):
+        if file.filename and file.filename.lower().endswith(".pdf"):
+            # Try reading first ~10 pages for performance
             reader = PdfReader(BytesIO(data))
             for page in reader.pages[:10]:
                 text += page.extract_text() or ""
         else:
-            # very small fallback – treat as textish
+            # Treat as text input if not PDF
             text = data.decode(errors="ignore")
-    except Exception:
-        # don’t fail tests if extraction is flaky – use bytes preview
+    except Exception as e:
+        # Fallback: show first 1000 bytes as string
         text = data[:1000].decode(errors="ignore")
+        if not text.strip():
+            raise HTTPException(status_code=500, detail=f"Failed to extract text: {e}")
 
     if not text.strip():
         text = "No extractable text found."
 
-    llm = LLMAdapter()
-    result = llm.summarize(text)
+    adapter = LLMAdapter()
+    result = adapter.summarize(text)
+
     return ReviewResult(**result)
