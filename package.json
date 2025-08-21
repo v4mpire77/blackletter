@@ -1,9 +1,0 @@
-{
-  "name": "blackletter-root",
-  "private": true,
-  "scripts": {
-    "postinstall": "npm --prefix frontend install",
-    "build": "npm --prefix frontend run build",
-    "start": "npm --prefix frontend run start -- -p $PORT"
-  }
-}
