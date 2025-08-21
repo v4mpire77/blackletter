@@ -12,8 +12,6 @@ Simple, fast contract review using AI. Upload → Extract → Summarise → Show
 1. Go to [Render](https://render.com) and create a new **Web Service** connected to this GitHub repository.
 2. Set the service root to `backend` and set environment variables:
    - `GEMINI_API_KEY=<your Google Gemini key>`
-   - `OPENAI_API_KEY=<your OpenAI key>` (optional)
-   - `PROVIDER_ORDER=gemini,openai`
 3. Build command: `pip install -r requirements.txt`
 4. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 5. Once deployed, note the public URL (e.g., `https://blackletter-api.onrender.com`) for your phone or frontend.
@@ -33,17 +31,15 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Set your LLM API keys:
+Set your LLM API key:
 
 ```powershell
 setx GEMINI_API_KEY "<YOUR_GEMINI_KEY>"
-setx OPENAI_API_KEY "<YOUR_OPENAI_KEY>"  # optional
-setx PROVIDER_ORDER "gemini,openai"
 ```
 
 ## Ollama Migration Guide
 
-For cost savings and privacy, you can migrate from cloud LLM providers (Gemini/OpenAI) to local Ollama models:
+For cost savings and privacy, you can migrate from cloud LLM providers (Gemini) to local Ollama models:
 
 ### 1. Install Ollama
 ```powershell
@@ -67,7 +63,7 @@ setx OLLAMA_URL "http://localhost:11434"  # default Ollama URL
 setx OLLAMA_MODEL "llama3.1"              # or your preferred model
 
 # Optional: Set fallback providers
-setx PROVIDER_ORDER "ollama,gemini,openai"
+setx PROVIDER_ORDER "ollama,gemini"
 ```
 
 ### 4. Start Ollama Server

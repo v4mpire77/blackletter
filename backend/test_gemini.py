@@ -29,7 +29,6 @@ and John Smith ("Employee").
         print(f"📊 Provider Details:")
         print(f"   Model: {provider_info['model']}")
         print(f"   Gemini configured: {provider_info['gemini_configured']}")
-        print(f"   OpenAI configured: {provider_info['openai_configured']}")
         print(f"   Ollama available: {provider_info['ollama_available']}")
         
         if provider_info['init_error']:
