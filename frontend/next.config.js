@@ -4,7 +4,12 @@ const nextConfig = {
   trailingSlash: true,
   images: {
     unoptimized: true
-  }
+  },
+  // Configure build optimization and caching
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
 };
 
 module.exports = nextConfig;

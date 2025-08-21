@@ -15,7 +15,7 @@ class LLMService:
     Service class for LLM operations, particularly contract analysis.
     
     This class provides a simple interface to interact with various LLM providers
-    (Gemini, OpenAI, Ollama) through the underlying LLMAdapter.
+    (Gemini, Ollama) through the underlying LLMAdapter.
     """
     
     def __init__(self):
