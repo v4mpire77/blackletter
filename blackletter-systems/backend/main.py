@@ -189,6 +189,11 @@ def analyze_contract_with_llm(contract_text: str, filename: Optional[str] = None
     
     return issues
 
+@app.get("/")
+async def root() -> Dict[str, str]:
+    """Root endpoint providing a simple service message."""
+    return {"message": "Blackletter API running"}
+
 @app.get("/health")
 def health():
     return {"ok": True, "service": "blackletter", "ts": datetime.utcnow().isoformat()}

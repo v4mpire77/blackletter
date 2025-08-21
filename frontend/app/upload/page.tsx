@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Navigation } from '@/components/navigation';
+import { API_URL, apiGet } from '@/lib/api';
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -17,8 +18,8 @@ export default function UploadPage() {
 
   async function checkApiHealth() {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/health`);
-      setApiHealth(res.ok ? 'ok' : 'error');
+      await apiGet('/health');
+      setApiHealth('ok');
     } catch (e) {
       setApiHealth('error');
     }
@@ -36,7 +37,7 @@ export default function UploadPage() {
     formData.append('file', file);
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiBase = API_URL;
       const uploadRes = await fetch(`${apiBase}/api/contracts`, {
         method: 'POST',
         body: formData,
@@ -45,11 +46,7 @@ export default function UploadPage() {
         throw new Error(await uploadRes.text());
       }
       const { id } = await uploadRes.json();
-      const findingsRes = await fetch(`${apiBase}/api/contracts/${id}/findings`);
-      if (!findingsRes.ok) {
-        throw new Error(await findingsRes.text());
-      }
-      const data = await findingsRes.json();
+      const data = await apiGet(`/api/contracts/${id}/findings`);
       setResult({ ...data, reportUrl: `${apiBase}/api/contracts/${id}/report` });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
