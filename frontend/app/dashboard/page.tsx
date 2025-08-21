@@ -1,112 +1,42 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { 
-  Upload, FileText, AlertTriangle, Scale, ShieldCheck, 
-  Gavel, Filter, Search, Download, RefreshCw, Sparkles,
-  Sun, Moon
-} from "lucide-react";
-
-// Import shadcn/ui components
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { API_URL, apiGet } from "@/lib/api";
+import { ResultsDashboard } from "@/components/results-dashboard";
+import { FileUpload } from "@/components/file-upload";
+import { ProcessingStatus } from "@/components/processing-status";
+import { mockAnalysisResult, mockIssues } from "@/data/sample-analysis";
+import { ContractAnalysisResult, Issue } from "@/types/contract-analysis";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { toPercent } from "@/lib/utils";
 
-// Recharts imports
-import {
-  BarChart as RBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip as RTooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  ResponsiveContainer,
-} from "recharts";
 
-// Types
-interface Issue {
+interface ContractEntry {
   id: string;
-  docId: string;
-  docName: string;
-  type: "GDPR" | "Statute" | "Case Law";
-  severity: "High" | "Medium" | "Low";
-  status: "Open" | "In Review" | "Resolved";
-  confidence: number;
-  snippet: string;
-  recommendation: string;
-  clausePath: string;
-  citation: string;
-  createdAt: string;
+  name: string;
+  status: "processing" | "done" | "error";
+  summary?: string;
+  error?: string;
 }
 
-// Mock data
-const mockIssues: Issue[] = [
-  {
-    id: "ISS-001",
-    docId: "DOC-001",
-    docName: "Service Agreement v2.1.pdf",
-    type: "GDPR",
-    severity: "High",
-    status: "Open",
-    confidence: 0.92,
-    snippet: "Personal data may be transferred to third countries without adequate protection...",
-    recommendation: "Add explicit GDPR compliance clauses and ensure adequate data protection measures",
-    clausePath: "Section 8.2 - Data Processing",
-    citation: "UK GDPR Article 44",
-    createdAt: "2025-08-14T10:22:00Z"
-  },
-  {
-    id: "ISS-002", 
-    docId: "DOC-001",
-    docName: "Service Agreement v2.1.pdf",
-    type: "Statute",
-    severity: "Medium",
-    status: "In Review",
-    confidence: 0.87,
-    snippet: "Limitation of liability clause may not comply with UK consumer protection laws...",
-    recommendation: "Review and revise liability limitations to ensure compliance with Consumer Rights Act 2015",
-    clausePath: "Section 12 - Limitation of Liability",
-    citation: "Consumer Rights Act 2015, Section 62",
-    createdAt: "2025-08-14T11:15:00Z"
-  },
-  {
-    id: "ISS-003",
-    docId: "DOC-002", 
-    docName: "Privacy Policy v1.3.pdf",
-    type: "Case Law",
-    severity: "Low",
-    status: "Resolved",
-    confidence: 0.76,
-    snippet: "Cookie consent mechanism could be strengthened based on recent ICO guidance...",
-    recommendation: "Implement more granular cookie consent options following Planet49 case precedent",
-    clausePath: "Section 4 - Cookie Policy",
-    citation: "Planet49 GmbH v Bundesverband (C-673/17)",
-    createdAt: "2025-08-14T14:30:00Z"
-  }
-];
-
-const mockDocs = [
-  { id: "DOC-001", name: "Service Agreement v2.1.pdf", uploadedAt: "2 days ago" },
-  { id: "DOC-002", name: "Privacy Policy v1.3.pdf", uploadedAt: "1 week ago" },
-  { id: "DOC-003", name: "Terms of Use v4.0.pdf", uploadedAt: "3 days ago" }
-];
-
 export default function Dashboard() {
-  // State
+  // Combined state from both branches
+  const [file, setFile] = useState<File | null>(null);
+  const [contracts, setContracts] = useState<ContractEntry[]>([]);
+  const [currentAnalysis, setCurrentAnalysis] = useState<ContractAnalysisResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showSampleData, setShowSampleData] = useState(false);
+  const apiBase = API_URL;
+
   const [darkMode, setDarkMode] = useState(false);
   const [apiHealth, setApiHealth] = useState<'loading' | 'ok' | 'error'>('loading');
   const [searchTerm, setSearchTerm] = useState("");
@@ -119,6 +49,17 @@ export default function Dashboard() {
   const [explanations, setExplanations] = useState<Record<string, { reasoning: string; citations: { source: string; url: string }[] }>>({});
   const ragApi = process.env.NEXT_PUBLIC_RAG_URL || 'http://localhost:8001';
 
+  const filteredIssues = issues.filter(issue => {
+    const termMatch = issue.snippet.toLowerCase().includes(searchTerm.toLowerCase()) || issue.recommendation.toLowerCase().includes(searchTerm.toLowerCase());
+    const typeMatch = typeFilter === "All" || issue.type === typeFilter;
+    const severityMatch = severityFilter === "All" || issue.severity === severityFilter;
+    const statusMatch = statusFilter === "All" || issue.status === statusFilter;
+    const gdprMatch = !gdprFocus || issue.type === "GDPR";
+    const hideResolvedMatch = !hideResolved || issue.status !== "Resolved";
+    return termMatch && typeMatch && severityMatch && statusMatch && gdprMatch && hideResolvedMatch;
+  });
+
+  // Combined logic from both branches
   async function fetchExplanation(id: string) {
     if (explanations[id]) return;
     try {
@@ -133,7 +74,66 @@ export default function Dashboard() {
       // ignore errors for demo
     }
   }
+  
+  const runChecks = async () => {
+    if (!file) return;
+    setIsAnalyzing(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    const entry: ContractEntry = { id: "", name: file.name, status: "processing" };
+    setContracts((prev) => [...prev, entry]);
+    
+    try {
+      const uploadRes = await fetch(`${apiBase}/api/contracts`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!uploadRes.ok) {
+        throw new Error(await uploadRes.text());
+      }
+      const { id } = await uploadRes.json();
+      const data = await apiGet(`/api/contracts/${id}/findings`);
+      entry.id = id;
+      entry.status = "done";
+      entry.summary = data.summary;
+      setContracts((prev) => [...prev]);
 
+      const analysisResult: ContractAnalysisResult = {
+        id: id,
+        contractName: file.name,
+        uploadedAt: new Date().toISOString(),
+        status: "completed",
+        summary: data.summary || "Analysis completed successfully.",
+        totalIssues: 0,
+        highRiskIssues: 0,
+        mediumRiskIssues: 0,
+        lowRiskIssues: 0,
+        averageConfidence: 0.85,
+        clauses: [],
+        issues: [],
+        riskScore: 45,
+        complianceScore: 78
+      };
+      setCurrentAnalysis(analysisResult);
+    } catch (err) {
+      entry.status = "error";
+      entry.error = err instanceof Error ? err.message : String(err);
+      setContracts((prev) => [...prev]);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleAnalyzeSample = () => {
+    setShowSampleData(true);
+    setCurrentAnalysis(mockAnalysisResult);
+  };
+
+  const handleFileSelect = (selectedFile: File) => {
+    setFile(selectedFile);
+  };
+  
+  // Combined useEffects
   useEffect(() => {
     issues.forEach((i) => {
       if (!explanations[i.id]) {
@@ -142,7 +142,6 @@ export default function Dashboard() {
     });
   }, [issues]);
 
-  // Check API health
   useEffect(() => {
     const checkHealth = async () => {
       try {
@@ -156,457 +155,289 @@ export default function Dashboard() {
         setApiHealth('error');
       }
     };
-
     checkHealth();
-    const interval = setInterval(checkHealth, 30000);
-    return () => clearInterval(interval);
   }, []);
 
-  // Filter issues
-  const filteredIssues = useMemo(() => {
-    return issues.filter((issue) => {
-      const matchesSearch = issue.snippet.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           issue.docName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = typeFilter === "All" || issue.type === typeFilter;
-      const matchesSeverity = severityFilter === "All" || issue.severity === severityFilter;
-      const matchesStatus = statusFilter === "All" || issue.status === statusFilter;
-      const matchesGdpr = !gdprFocus || issue.type === "GDPR";
-      const matchesResolved = !hideResolved || issue.status !== "Resolved";
-      
-      return matchesSearch && matchesType && matchesSeverity && matchesStatus && matchesGdpr && matchesResolved;
-    });
-  }, [issues, searchTerm, typeFilter, severityFilter, statusFilter, gdprFocus, hideResolved]);
-
-  // Aggregate stats for KPIs and charts
-  const aggregates = useMemo(() => {
-    const result = filteredIssues.reduce(
-      (
-        acc,
-        issue
-      ) => {
-        acc.uniqueDocs.add(issue.docId);
-        acc.severityCounts[issue.severity] += 1;
-        acc.typeCounts[issue.type] += 1;
-        acc.confidenceSum += issue.confidence;
-        return acc;
-      },
-      {
-        uniqueDocs: new Set<string>(),
-        severityCounts: { High: 0, Medium: 0, Low: 0 },
-        typeCounts: { GDPR: 0, Statute: 0, "Case Law": 0 },
-        confidenceSum: 0,
-      }
-    );
-
-    return {
-      totalDocs: result.uniqueDocs.size,
-      severityCounts: result.severityCounts,
-      typeCounts: result.typeCounts,
-      avgConfidence:
-        filteredIssues.length > 0
-          ? result.confidenceSum / filteredIssues.length
-          : 0,
-    };
-  }, [filteredIssues]);
-
-  const kpis = {
-    totalDocs: aggregates.totalDocs,
-    high: aggregates.severityCounts.High,
-    medium: aggregates.severityCounts.Medium,
-    low: aggregates.severityCounts.Low,
-    avgConfidence: aggregates.avgConfidence,
-  };
-
-  // Chart data
-  const distByType = [
-    { name: "GDPR", value: aggregates.typeCounts.GDPR },
-    { name: "Statute", value: aggregates.typeCounts.Statute },
-    { name: "Case Law", value: aggregates.typeCounts["Case Law"] },
-  ];
-
-  const distBySeverity = [
-    { name: "High", value: aggregates.severityCounts.High, color: "#ef4444" },
-    { name: "Medium", value: aggregates.severityCounts.Medium, color: "#f59e0b" },
-    { name: "Low", value: aggregates.severityCounts.Low, color: "#10b981" },
-  ];
-
-  // Helper function
-  const toPercent = (decimal: number) => (decimal * 100).toFixed(1) + '%';
-
   return (
-    <div className={darkMode ? 'min-h-screen dark bg-gray-900' : 'min-h-screen bg-gray-50'}>
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Contract Review Dashboard
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              UK Law Compliance Analysis
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {/* API Status */}
-            <div className={apiHealth === 'ok' ? 'px-2 py-1 rounded-full text-xs flex items-center gap-1.5 bg-green-500/10 text-green-400 border border-green-500/20' : apiHealth === 'error' ? 'px-2 py-1 rounded-full text-xs flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/20' : 'px-2 py-1 rounded-full text-xs flex items-center gap-1.5 bg-gray-700 text-gray-400 border border-gray-600'}>
-              <div className={apiHealth === 'ok' ? 'w-1.5 h-1.5 rounded-full bg-green-400' : apiHealth === 'error' ? 'w-1.5 h-1.5 rounded-full bg-red-400' : 'w-1.5 h-1.5 rounded-full bg-gray-400'} />
-              {apiHealth === 'loading' ? 'Connecting...' : apiHealth.toUpperCase()}
-            </div>
+    <div className="space-y-6">
+      {/* Header with Upload */}
+      <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-6 rounded-lg border">
+        <h1 className="text-3xl font-bold mb-2">Contract Analysis Dashboard</h1>
+        <p className="text-muted-foreground mb-6">
+          Upload contracts for AI-powered compliance analysis and risk assessment
+        </p>
 
-            {/* Dark Mode Toggle */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDarkMode(!darkMode)}
-              className="flex items-center gap-2"
-            >
-              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              {darkMode ? "Light" : "Dark"}
-            </Button>
-          </div>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Contract</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FileUpload
+                onFileSelect={handleFileSelect}
+                isLoading={isAnalyzing}
+                acceptedTypes={['application/pdf']}
+                maxSize={10 * 1024 * 1024}
+              />
+              <div className="flex gap-2">
+                <Button onClick={runChecks} disabled={!file || isAnalyzing} className="flex-1">
+                  {isAnalyzing ? "Analyzing..." : "Analyze Contract"}
+                </Button>
+                <Button variant="outline" onClick={handleAnalyzeSample}>
+                  View Sample
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Main Content */}
-        <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto">
-          {/* Sidebar Filters */}
-          <div className="w-full lg:w-80 lg:shrink-0">
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="h-4 w-4" /> Filters
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Issue Type</Label>
-                  <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All</SelectItem>
-                      <SelectItem value="GDPR">GDPR</SelectItem>
-                      <SelectItem value="Statute">Statute</SelectItem>
-                      <SelectItem value="Case Law">Case Law</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Severity</Label>
-                  <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="Low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All</SelectItem>
-                      <SelectItem value="Open">Open</SelectItem>
-                      <SelectItem value="In Review">In Review</SelectItem>
-                      <SelectItem value="Resolved">Resolved</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label>Search</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search issues..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="gdpr-focus">GDPR Focus</Label>
-                  <Switch 
-                    id="gdpr-focus"
-                    checked={gdprFocus}
-                    onCheckedChange={setGdprFocus}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="hide-resolved">Hide Resolved</Label>
-                  <Switch
-                    id="hide-resolved"
-                    checked={hideResolved}
-                    onCheckedChange={setHideResolved}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="flex-1 space-y-6">
-            {/* KPIs */}
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Documents Scanned</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-semibold">{kpis.totalDocs}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">High Risk</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-semibold">{kpis.high}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Med / Low</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-semibold">{kpis.medium} / {kpis.low}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Model Confidence</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-semibold">{toPercent(kpis.avgConfidence)}</CardContent>
-              </Card>
-            </div>
-
-            {/* Charts */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-0">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Gavel className="h-4 w-4" /> Issues by Type
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RBarChart data={distByType}>
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} />
-                      <RTooltip />
-                      <Legend />
-                      <Bar dataKey="value" name="Count" fill="#3b82f6" />
-                    </RBarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-0">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Scale className="h-4 w-4" /> Issues by Severity
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie 
-                        data={distBySeverity} 
-                        dataKey="value" 
-                        nameKey="name" 
-                        outerRadius={80} 
-                        label 
-                      >
-                        {distBySeverity.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Legend />
-                      <RTooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Issues Table */}
+          {isAnalyzing && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Gavel className="h-4 w-4" /> Open Issues
-                </CardTitle>
-                <div className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Showing {filteredIssues.length} of {issues.length} issues
-                </div>
+                <CardTitle>Processing Status</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Document</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Severity</TableHead>
-                      <TableHead>Snippet</TableHead>
-                      <TableHead>Confidence</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredIssues.map((issue) => (
-                      <TableRow key={issue.id}>
-                        <TableCell>
-                          <div className="max-w-[150px] truncate">{issue.docName}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{issue.type}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={issue.severity === "High" ? "destructive" : issue.severity === "Medium" ? "secondary" : "default"}>
-                            {issue.severity}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-[250px] truncate text-sm">{issue.snippet}</div>
-                        </TableCell>
-                        <TableCell>{toPercent(issue.confidence)}</TableCell>
-                        <TableCell>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm">View</Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl">
-                              <DialogHeader>
-                                <DialogTitle>{issue.id} - {issue.docName}</DialogTitle>
-                              </DialogHeader>
-                              <Tabs defaultValue="details" className="w-full">
-                                <TabsList>
-                                  <TabsTrigger value="details">Details</TabsTrigger>
-                                  <TabsTrigger value="trace">LLM Trace</TabsTrigger>
-                                  <TabsTrigger value="citations">Citations</TabsTrigger>
-                                  <TabsTrigger value="justification">Justification</TabsTrigger>
-                                  <TabsTrigger value="history">History</TabsTrigger>
-                                </TabsList>
+                <ProcessingStatus
+                  status="analyzing"
+                  fileName={file?.name}
+                  progress={65}
+                  estimatedTime={30}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
 
-                                <TabsContent value="details" className="space-y-4">
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <Label>Clause Path</Label>
-                                      <p className="mt-1">{issue.clausePath}</p>
-                                    </div>
-                                    <div>
-                                      <Label>Citation</Label>
-                                      <p className="mt-1">{issue.citation}</p>
-                                    </div>
-                                  </div>
+      {/* Contract History */}
+      {contracts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Analyses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Contract</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Report</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contracts.map((c, i) => (
+                    <tr key={i} className="border-b">
+                      <td className="p-2">{c.name}</td>
+                      <td className="p-2">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          c.status === "done"
+                            ? "bg-green-100 text-green-700"
+                            : c.status === "processing"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-red-100 text-red-700"
+                        }`}>
+                          {c.status === "done"
+                            ? "Completed"
+                            : c.status === "processing"
+                            ? "Processing"
+                            : "Error"}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        {c.status === "done" ? (
+                          <Link
+                            href={`${apiBase}/api/contracts/${c.id}/report`}
+                            target="_blank"
+                            className="text-blue-500 underline hover:text-blue-700"
+                          >
+                            View Report
+                          </Link>
+                        ) : c.status === "error" ? (
+                          <span className="text-red-500 text-xs">{c.error}</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-                                  <div>
-                                    <Label>Snippet</Label>
-                                    <Textarea value={issue.snippet} readOnly className="mt-1" rows={3} />
-                                  </div>
-
-                                  <div>
-                                    <Label>Recommendation</Label>
-                                    <Textarea value={issue.recommendation} readOnly className="mt-1" rows={4} />
-                                  </div>
-                                </TabsContent>
-
-                                <TabsContent value="trace" className="space-y-4">
-                                  <div className="rounded bg-neutral-50 p-4 dark:bg-neutral-800">
-                                    <pre className="whitespace-pre-wrap text-sm">
-{`Model: gpt-4-turbo
+      {/* Main Dashboard - Issues Table */}
+      {currentAnalysis && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Analysis Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 mb-4">
+              <Input
+                placeholder="Search issues..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Button onClick={() => setHideResolved(prev => !prev)} variant={hideResolved ? "default" : "outline"}>
+                {hideResolved ? "Show All Issues" : "Hide Resolved"}
+              </Button>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Document</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Severity</TableHead>
+                  <TableHead>Snippet</TableHead>
+                  <TableHead>Confidence</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredIssues.map((issue) => (
+                  <TableRow key={issue.id}>
+                    <TableCell>
+                      <div className="max-w-[150px] truncate">{issue.docName}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{issue.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={issue.severity === "High" ? "destructive" : issue.severity === "Medium" ? "secondary" : "default"}>
+                        {issue.severity}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-[250px] truncate text-sm">{issue.snippet}</div>
+                    </TableCell>
+                    <TableCell>{toPercent(issue.confidence)}</TableCell>
+                    <TableCell>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">View</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl">
+                          <DialogHeader>
+                            <DialogTitle>{issue.id} - {issue.docName}</DialogTitle>
+                          </DialogHeader>
+                          <Tabs defaultValue="details" className="w-full">
+                            <TabsList>
+                              <TabsTrigger value="details">Details</TabsTrigger>
+                              <TabsTrigger value="trace">LLM Trace</TabsTrigger>
+                              <TabsTrigger value="citations">Citations</TabsTrigger>
+                              <TabsTrigger value="justification">Justification</TabsTrigger>
+                              <TabsTrigger value="history">History</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="details" className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Clause Path</Label>
+                                  <p className="mt-1">{issue.clausePath}</p>
+                                </div>
+                                <div>
+                                  <Label>Citation</Label>
+                                  <p className="mt-1">{issue.citation}</p>
+                                </div>
+                              </div>
+                              <div>
+                                <Label>Snippet</Label>
+                                <Textarea value={issue.snippet} readOnly className="mt-1" rows={3} />
+                              </div>
+                              <div>
+                                <Label>Recommendation</Label>
+                                <Textarea value={issue.recommendation} readOnly className="mt-1" rows={4} />
+                              </div>
+                            </TabsContent>
+                            <TabsContent value="trace" className="space-y-4">
+                              <div className="rounded bg-neutral-50 p-4 dark:bg-neutral-800">
+                                <pre className="whitespace-pre-wrap text-sm">
+                                  {`Model: gpt-4-turbo
 Input Tokens: 2,847
 Output Tokens: 312
 Latency: 2.3s
-
 System: You are a UK legal compliance expert...
 User: Analyze this clause for GDPR compliance...
 Assistant: I've identified a high-severity GDPR issue...`}
-                                    </pre>
+                                </pre>
+                              </div>
+                            </TabsContent>
+                            <TabsContent value="citations" className="space-y-4">
+                              <div className="space-y-2">
+                                <div className="rounded border p-3">
+                                  <div className="font-medium">UK GDPR Article 44</div>
+                                  <div className="mt-1 text-neutral-600 dark:text-neutral-400">
+                                    General principle for transfers: Any transfer of personal data...
                                   </div>
-                                </TabsContent>
-
-                                <TabsContent value="citations" className="space-y-4">
-                                  <div className="space-y-2">
-                                    <div className="rounded border p-3">
-                                      <div className="font-medium">UK GDPR Article 44</div>
-                                      <div className="mt-1 text-neutral-600 dark:text-neutral-400">
-                                        General principle for transfers: Any transfer of personal data...
-                                      </div>
-                                    </div>
-                                    <div className="rounded border p-3">
-                                      <div className="font-medium">DPA 2018 Part 2</div>
-                                      <div className="mt-1 text-neutral-600 dark:text-neutral-400">
-                                        Processing for law enforcement purposes...
-                                      </div>
-                                    </div>
+                                </div>
+                                <div className="rounded border p-3">
+                                  <div className="font-medium">DPA 2018 Part 2</div>
+                                  <div className="mt-1 text-neutral-600 dark:text-neutral-400">
+                                    Processing for law enforcement purposes...
                                   </div>
-                                </TabsContent>
-
-                                <TabsContent value="justification" className="space-y-4">
-                                  {explanations[issue.id] ? (
-                                    <div className="space-y-4">
-                                      <div>
-                                        <Label>Reasoning</Label>
-                                        <p className="mt-1 text-sm">{explanations[issue.id].reasoning}</p>
-                                      </div>
-                                      <div>
-                                        <Label>Citations</Label>
-                                        <ul className="list-disc list-inside">
-                                          {explanations[issue.id].citations.map((c, i) => (
-                                            <li key={i}>
-                                              <a href={c.url} target="_blank" className="text-blue-500 underline">
-                                                {c.source}
-                                              </a>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm text-neutral-500">Loading...</p>
-                                  )}
-                                </TabsContent>
-
-                                <TabsContent value="history" className="space-y-4">
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <span className="text-neutral-500">2025-08-14 10:22</span>
-                                      <span>Created by AI Analysis</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <span className="text-neutral-500">2025-08-14 15:30</span>
-                                      <span>Assigned to Omar</span>
-                                    </div>
+                                </div>
+                              </div>
+                            </TabsContent>
+                            <TabsContent value="justification" className="space-y-4">
+                              {explanations[issue.id] ? (
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label>Reasoning</Label>
+                                    <p className="mt-1 text-sm">{explanations[issue.id].reasoning}</p>
                                   </div>
-                                </TabsContent>
-                              </Tabs>
-                            </DialogContent>
-                          </Dialog>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                                  <div>
+                                    <Label>Citations</Label>
+                                    <ul className="list-disc list-inside">
+                                      {explanations[issue.id].citations.map((c, i) => (
+                                        <li key={i}>
+                                          <a href={c.url} target="_blank" className="text-blue-500 underline">
+                                            {c.source}
+                                          </a>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-neutral-500">Loading...</p>
+                              )}
+                            </TabsContent>
+                            <TabsContent value="history" className="space-y-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-neutral-500">2025-08-14 10:22</span>
+                                  <span>Created by AI Analysis</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-neutral-500">2025-08-14 15:30</span>
+                                  <span>Assigned to Omar</span>
+                                </div>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {filteredIssues.length === 0 && (
+              <div className="py-8 text-center text-neutral-500 dark:text-neutral-400">
+                <p>No issues found matching the current filters.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-                {filteredIssues.length === 0 && (
-                  <div className="py-8 text-center text-neutral-500 dark:text-neutral-400">
-                    <p>No issues found matching the current filters.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+      {/* Results Dashboard - This is a separate component, not part of the conflict */}
+      <ResultsDashboard
+        analysisResult={currentAnalysis}
+        onAnalyze={file ? runChecks : handleAnalyzeSample}
+        isAnalyzing={isAnalyzing}
+      />
     </div>
   );
 }
