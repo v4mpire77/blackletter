@@ -2,11 +2,23 @@ services:
   - type: web
     name: blackletter
     env: python
-    rootDir: backend
+    region: oregon
+    plan: free
     buildCommand: |
-      pip install -r requirements.txt
-      cd ../frontend && npm install && npm run build
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+      # Install Python deps
+      pip install --upgrade pip
+      pip install -r backend/requirements.txt
+
+      # Install Node + build frontend
+      cd frontend
+      npm install
+      npm run build
+      cd ..
+
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+
     envVars:
-      - key: GEMINI_API_KEY
-        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: NODE_VERSION
+        value: 18.18.0
