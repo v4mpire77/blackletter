@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 from io import BytesIO
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fastapi import UploadFile
 from routers import contracts
