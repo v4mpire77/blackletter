@@ -7,7 +7,7 @@ for testing and use throughout the application.
 
 import os
 import asyncio
-from app.core.llm_adapter import LLMAdapter
+from backend.app.core.llm_adapter import LLMAdapter
 
 
 class LLMService:
@@ -51,5 +51,5 @@ class LLMService:
             "model": self.adapter.model,
             "gemini_configured": bool(self.adapter.gemini_key),
             "ollama_available": self.adapter.ollama_reachable,
-            "init_error": self.adapter.init_error
+            "init_error": self.adapter.init_error,
         }

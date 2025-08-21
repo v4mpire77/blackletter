@@ -19,7 +19,7 @@ services:
       # Install Python deps
       pip install --upgrade pip
       pip install maturin
-      pip install -r backend/requirements.txt
+      pip install -r src/backend/requirements.txt
 
       # Install Node + build frontend
       cd frontend
@@ -28,11 +28,11 @@ services:
       cd ..
 
       python -m pip install --upgrade pip setuptools wheel \
-      && python -m pip install -r backend/requirements.txt \
+      && python -m pip install -r src/backend/requirements.txt \
       && cd frontend && npm ci \
       && NEXT_PUBLIC_API_URL=/ npm run export \
       && cd ..
-    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT --app-dir src
     envVars:
       - key: GEMINI_API_KEY
         sync: false

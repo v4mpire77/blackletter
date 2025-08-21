@@ -6,10 +6,11 @@ from io import BytesIO
 
 
 from fastapi import UploadFile
-from routers import contracts
+from backend.routers import contracts
 
 
 def test_review_contract_handles_page_without_text(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
     class DummyPage:
         def extract_text(self):
             return None

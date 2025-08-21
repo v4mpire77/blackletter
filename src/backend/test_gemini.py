@@ -1,7 +1,10 @@
 import os
 import asyncio
 import json
-from llm_service import LLMService
+import pytest
+from backend.llm_service import LLMService
+
+pytestmark = pytest.mark.skip("Integration test requiring external Gemini API")
 
 async def test_gemini():
     """Test Gemini API integration"""

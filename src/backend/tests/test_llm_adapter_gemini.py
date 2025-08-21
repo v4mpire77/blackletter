@@ -9,8 +9,10 @@ else:
 
 from unittest.mock import Mock, patch
 
-def test_generate_text():
+
+def test_generate_text(monkeypatch):
     """Test generate_text function with mocked Gemini client."""
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
     with patch('backend.services.llm.GeminiClient') as mock_client_class:
         # Mock the client instance
         mock_client = Mock()

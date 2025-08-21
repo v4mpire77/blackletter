@@ -11,7 +11,7 @@ def ocr_available() -> bool:
 def extract_text_from_image(image_bytes: bytes, lang: Optional[str] = None) -> str:
     """
     Extract text using Tesseract OCR. Requires:
-      - Python deps in backend/requirements-ocr.txt
+      - Python deps in src/backend/requirements-ocr.txt
       - System binary: tesseract-ocr
     """
     if not ENABLE_OCR:
@@ -29,7 +29,7 @@ def extract_text_from_image(image_bytes: bytes, lang: Optional[str] = None) -> s
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     """
     Extract text from PDF using pdfplumber and OCR for images. Requires:
-      - Python deps in backend/requirements-ocr.txt
+      - Python deps in src/backend/requirements-ocr.txt
       - System binary: tesseract-ocr
     """
     if not ENABLE_OCR:
@@ -42,7 +42,9 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
         from PIL import Image  # type: ignore
         import io
     except ImportError as e:
-        raise RuntimeError(f"OCR dependencies not installed. Run: pip install -r requirements-ocr.txt. Missing: {e}")
+        raise RuntimeError(
+            f"OCR dependencies not installed. Run: pip install -r src/backend/requirements-ocr.txt. Missing: {e}"
+        )
 
     with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
         text_content = []
