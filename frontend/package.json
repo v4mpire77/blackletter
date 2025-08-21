@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "export": "echo 'Static export completed during build step'",
+    "export": "next build",
     "start": "serve out"
   },
   "engines": { "node": ">=18 <21" },
