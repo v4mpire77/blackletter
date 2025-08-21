@@ -1,10 +1,12 @@
 from fastapi.testclient import TestClient
-from app.main import app
+from backend.main import app
 import io
 
 client = TestClient(app)
 
-def test_review_endpoint_accepts_file_and_returns_summary_and_risks():
+
+def test_review_endpoint_accepts_file_and_returns_summary_and_risks(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
     # Fake PDF-like bytes; endpoint tolerates non-strict input
     content = b"%PDF-1.4\nThis Agreement covers personal data and liability.\n%%EOF"
     files = {"file": ("test.pdf", io.BytesIO(content), "application/pdf")}

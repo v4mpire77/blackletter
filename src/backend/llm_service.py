@@ -5,11 +5,11 @@ This module wraps the existing LLMAdapter to provide a consistent interface
 for testing and use throughout the application.
 """
 
+
 import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict
-
-from app.core.llm_adapter import LLMAdapter
+from backend.app.core.llm_adapter import LLMAdapter
 
 
 class LLMService:

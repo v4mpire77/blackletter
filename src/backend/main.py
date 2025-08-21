@@ -1,10 +1,9 @@
-// ...existing code...
 from __future__ import annotations
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
+import os
 from dotenv import load_dotenv
 
 from .routers import contracts, issues, coverage, redlines, gemini
@@ -17,12 +16,7 @@ app = FastAPI(title="Blackletter")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "https://blackletter.vercel.app",
-        "*",
-    ],
+    allow_origins=["https://blackletter.vercel.app", "*"], # Combined for Vercel deploy and local testing
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,14 +53,8 @@ app.include_router(contracts.router, prefix="/api", tags=["contracts"])
 app.include_router(issues.router,    prefix="/api", tags=["issues"])
 app.include_router(coverage.router,  prefix="/api", tags=["coverage"])
 app.include_router(redlines.router,  prefix="/api", tags=["redlines"])
+# Gemini endpoint for prompt testing
 app.include_router(gemini.router,    prefix="/api", tags=["gemini"])
-
-# Optional: mount RAG sub-app if available
-try:
-    from rag.api import app as rag_app  # type: ignore
-    app.mount("/rag", rag_app)
-except Exception:
-    pass
 
 # OCR router - conditionally mounted when ENABLE_OCR=true
 ENABLE_OCR = os.getenv("ENABLE_OCR", "false").lower() in {"1", "true", "yes"}

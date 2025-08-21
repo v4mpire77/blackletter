@@ -108,7 +108,7 @@ services:
       N8N_BASIC_AUTH_PASSWORD: adminadmin
 
   backend:
-    build: ./backend
+    build: ./src/backend
     env_file: .env
     ports: ["8000:8000"]
     depends_on: [db, minio, weaviate]
@@ -156,27 +156,28 @@ N8N_PASS=adminadmin
 
 ```
 blackletter/
-  backend/
-    app/
-      routers/
-        contracts.py
-        compliance.py
-        research.py
-      core/
-        llm_adapter.py       # openai|anthropic|ollama via one interface
-        ocr.py               # pdfplumber + pytesseract
-        storage.py           # MinIO S3 client
-        vectors.py           # Weaviate/Qdrant client
-        redact.py            # docx redlining helpers
-        citations.py         # para-level citation enforcement
-      services/
-        contract_review.py
-        compliance_ingest.py # also exposes webhooks for n8n
-        research_query.py
-      models/
-        schemas.py
-    main.py
-    requirements.txt
+  src/
+    backend/
+      app/
+        routers/
+          contracts.py
+          compliance.py
+          research.py
+        core/
+          llm_adapter.py       # openai|anthropic|ollama via one interface
+          ocr.py               # pdfplumber + pytesseract
+          storage.py           # MinIO S3 client
+          vectors.py           # Weaviate/Qdrant client
+          redact.py            # docx redlining helpers
+          citations.py         # para-level citation enforcement
+        services/
+          contract_review.py
+          compliance_ingest.py # also exposes webhooks for n8n
+          research_query.py
+        models/
+          schemas.py
+      main.py
+      requirements.txt
   frontend/
     app/
       upload/
@@ -214,7 +215,7 @@ blackletter/
 * For contract redlines, create `.docx` via `python-docx` and store alongside `review.json` + `summary.md`.
 * Emit events (`POST /events`) for n8n to consume when a job completes.
 
-**Test data**: add fixtures under `backend/tests/fixtures/` including sample NDAs, leases, and BAILII snippets.
+**Test data**: add fixtures under `src/backend/tests/fixtures/` including sample NDAs, leases, and BAILII snippets.
 
 **Edge cases**: low-quality scans, missing pages, multi-language PDFs, tables.
 
@@ -265,8 +266,8 @@ docker compose up -d db minio weaviate meilisearch gotenberg n8n
 
 # Backend
 python -m venv .venv; .\.venv\Scripts\Activate.ps1
-pip install -r backend\requirements.txt
-uvicorn backend.main:app --reload --port 8000
+pip install -r src\backend\requirements.txt
+uvicorn backend.main:app --reload --port 8000 --app-dir src
 
 # Frontend
 cd frontend
@@ -366,7 +367,7 @@ npm run dev
 }
 ```
 
-* **Copilot Chat quick context**: “Read `/docs/*`, `/backend/app/core/*`, and `/n8n/workflows/*` before generating code.”
+* **Copilot Chat quick context**: “Read `/docs/*`, `/src/backend/app/core/*`, and `/n8n/workflows/*` before generating code.”
 
 ---
 

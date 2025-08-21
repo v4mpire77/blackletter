@@ -5,7 +5,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
 Content-Disposition: form-data; name="file"; filename="test.pdf"
 Content-Type: application/pdf
 
-< ../backend/tests/fixtures/uk_nda.pdf
+< ../src/backend/tests/fixtures/uk_nda.pdf
 ------WebKitFormBoundary--
 
 ### Use returned id to fetch findings

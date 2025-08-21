@@ -3,14 +3,19 @@ from pydantic import BaseModel
 from pypdf import PdfReader
 from io import BytesIO
 
-from app.core.llm_adapter import LLMAdapter
+from ..app.core.llm_adapter import LLMAdapter
 
-router = APIRouter(prefix="/api", tags=["contracts"])
+try:  # pragma: no cover - openai is optional but tests patch it
+    import openai  # type: ignore
+except Exception:  # pragma: no cover
+    openai = None  # type: ignore
+
+router = APIRouter(tags=["contracts"])
 
 
 class ReviewResult(BaseModel):
     summary: str
-    risks: list[dict]
+    risks: list[str]
 
 
 @router.post("/review", response_model=ReviewResult)
@@ -42,6 +47,22 @@ async def review_contract(file: UploadFile = File(...)) -> ReviewResult:
 
     if not text.strip():
         text = "No extractable text found."
+
+    if openai is not None:
+        try:
+            resp = openai.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": text}],
+            )
+            content = resp["choices"][0]["message"]["content"]
+            lines = content.split("\n\n")
+            summary = lines[0].strip()
+            risks: list[str] = []
+            if len(lines) > 1:
+                risks = [r.strip().lstrip("- ") for r in lines[1].split("\n") if r.strip()]
+            return ReviewResult(summary=summary, risks=risks)
+        except Exception:
+            pass
 
     adapter = LLMAdapter()
     result = adapter.summarize(text)
