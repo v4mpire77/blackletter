@@ -12,7 +12,6 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
 class TransientLLMError(Exception):
     pass
-
 class GeminiClient:
     def __init__(self, model: Optional[str] = None):
         api_key = os.getenv("GEMINI_API_KEY")
