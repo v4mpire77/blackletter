@@ -5,10 +5,11 @@ services:
     plan: free
     branch: main
     runtime: python
+    rootDir: src
     buildCommand: |
       pip install --upgrade pip
-      pip install -r src/backend/requirements.txt
-    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.main:app --bind 0.0.0.0:$PORT --workers 2 --chdir src
+      pip install -r backend/requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.main:app --bind 0.0.0.0:$PORT --workers 2
     envVars:
       - key: GEMINI_API_KEY
         sync: false
