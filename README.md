@@ -103,6 +103,28 @@ Content-Type: application/pdf
 GET http://localhost:8000/api/contracts/{id}/findings
 ```
 
+## Deployment Notes
+
+### Requirements Files Consolidation
+
+The repository's Python dependencies have been consolidated into a single, unified requirements file format:
+
+- **Fixed Issue**: Removed malformed blank lines and UTF-8 BOM characters that were causing Render deployment failures
+- **Consolidated Dependencies**: Merged all backend requirements from multiple files into a single, consistent dependency list
+- **Unified Versions**: Updated to the latest compatible versions across all requirements files
+
+Both `backend/requirements.txt` and `blackletter-systems/backend/requirements.txt` now contain identical, clean dependency specifications.
+
+### Simplified Render Build Command
+
+For optimal Render deployment, you can now use this simplified build command:
+
+```bash
+pip install -r backend/requirements.txt && cd frontend && npm ci && NEXT_PUBLIC_API_URL=/ npm run export && cd ..
+```
+
+This replaces any previous multi-step dependency installation processes and ensures consistent deployment.
+
 ## Next Steps
 
 1. Add clause heuristics (termination, assignment, rent review, liability)
