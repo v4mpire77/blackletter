@@ -8,16 +8,33 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CARGO_HOME: $HOME/.cargo
+      RUSTUP_HOME: $HOME/.rustup
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Install Rust
         run: |
-          export CARGO_HOME=$HOME/.cargo
-          export RUSTUP_HOME=$HOME/.rustup
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           source $HOME/.cargo/env
           rustc --version
 
-      # Other steps can be added here
+      - name: Upgrade Pip
+        run: pip install --upgrade pip
+
+      - name: Install Dependencies
+        run: |
+          if [ -f backend/requirements.txt ]; then
+            pip install -r backend/requirements.txt
+          fi
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
