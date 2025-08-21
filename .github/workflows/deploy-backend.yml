@@ -1,20 +1,16 @@
-name: Rust and Pip Setup
+name: Deploy Backend
 
 on:
   push:
     branches:
       - main
-  pull_request:
 
 jobs:
-  setup:
+  deploy:
     runs-on: ubuntu-latest
-    env:
-      CARGO_HOME: $HOME/.cargo
-      RUSTUP_HOME: $HOME/.rustup
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set Up Python
@@ -24,6 +20,8 @@ jobs:
 
       - name: Install Rust
         run: |
+          export CARGO_HOME=$HOME/.cargo
+          export RUSTUP_HOME=$HOME/.rustup
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           source $HOME/.cargo/env
           rustc --version
@@ -32,10 +30,4 @@ jobs:
         run: pip install --upgrade pip
 
       - name: Install Dependencies
-        run: |
-          if [ -f backend/requirements.txt ]; then
-            pip install -r backend/requirements.txt
-          fi
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+        run: pip install -r backend/requirements.txt
