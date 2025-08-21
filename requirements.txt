@@ -1,11 +1,1 @@
-chromadb
-fastapi
-google-generativeai
-httpx==0.26.0
-openai
-pydantic==2.8.2
-pypdf
-python-docx
-python-multipart
-tiktoken
-uvicorn
+-r backend/requirements.txt
