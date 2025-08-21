@@ -8,16 +8,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CARGO_HOME: ${{ env.HOME }}/.cargo
+      RUSTUP_HOME: ${{ env.HOME }}/.rustup
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Install Rust
         run: |
-          export CARGO_HOME=$HOME/.cargo
-          export RUSTUP_HOME=$HOME/.rustup
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source $HOME/.cargo/env
+          source "$CARGO_HOME/env"
           rustc --version
 
       # Other steps can be added here
