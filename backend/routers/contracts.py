@@ -11,7 +11,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 
 from backend.models.schemas import UploadResponse, AnalysisResponse
-from backend.app.core.ocr import perform_ocr
+# from backend.app.core.ocr import OCRProcessor, ocr_available # OCR DISABLED
 from backend.app.core.llm_adapter import analyze_contract_with_llm
 
 router = APIRouter(prefix="/api", tags=["contracts"])
@@ -91,8 +91,12 @@ async def analyze_contract(doc_id: str):
         with open(file_path, "rb") as f:
             content = f.read()
         
-        # Perform simulated OCR to extract text
-        extracted_text = perform_ocr(content, filename)
+        # Perform simulated OCR to extract text -- DISABLED
+        # if not ocr_available():
+        #     raise HTTPException(status_code=501, detail="OCR functionality is not enabled or dependencies are missing.")
+        # ocr_processor = OCRProcessor()
+        # extracted_text = await ocr_processor.extract_text(content)
+        extracted_text = "OCR is currently disabled. Using placeholder text."
         
         # Perform simulated LLM analysis
         issues = analyze_contract_with_llm(extracted_text, filename)

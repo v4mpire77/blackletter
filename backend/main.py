@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
 
 # Import the new Gemini router
-from .routers import contracts, issues, coverage, redlines, gemini, ocr
+from .routers import contracts, issues, coverage, redlines, gemini  # , ocr  # Commented out ocr import
 
 load_dotenv()  # only needed locally
 
@@ -58,7 +58,15 @@ app.include_router(issues.router,    prefix="/api", tags=["issues"])
 app.include_router(coverage.router,  prefix="/api", tags=["coverage"])
 app.include_router(redlines.router,  prefix="/api", tags=["redlines"])
 app.include_router(gemini.router,    prefix="/api", tags=["gemini"])
-app.include_router(ocr.router,       prefix="/api/ocr", tags=["ocr"])
+# OCR router - conditionally mounted when ENABLE_OCR=true
+# ENABLE_OCR = os.getenv("ENABLE_OCR", "false").lower() in {"1", "true", "yes"}
+# if ENABLE_OCR:
+#     try:
+#         from .routers import ocr
+#         app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
+#     except ImportError:
+#         # OCR dependencies not available - OCR functionality will be disabled
+#         pass
 
 # Optional: mount RAG sub-app if available
 try:
