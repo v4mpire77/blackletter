@@ -8,26 +8,26 @@ The OCR functionality is now gated behind an `ENABLE_OCR` environment variable w
 
 ## Files Changed
 
-### 1. `backend/requirements.txt`
+### 1. `src/backend/requirements.txt`
 Updated to remove OCR dependencies:
 - Removed: `Pillow`, `pdfplumber`, `pytesseract`, `openai>=1.0.0`
 - Updated: `requests` version to `2.32.3`
 - Kept all core API dependencies for FastAPI, Uvicorn, etc.
 
-### 2. `backend/requirements-ocr.txt`
+### 2. `src/backend/requirements-ocr.txt`
 Separate requirements file containing only OCR dependencies:
 - `Pillow==10.4.0`
 - `pdfplumber==0.11.4`
 - `pytesseract==0.3.10`
 
-### 3. `backend/services/ocr.py`
+### 3. `src/backend/services/ocr.py`
 Updated OCR service with feature flag:
 - Uses `ENABLE_OCR` environment variable (accepts: "1", "true", "yes")
 - Lazy imports OCR dependencies inside functions
 - Clear error messages when OCR is disabled or dependencies missing
 - Added language parameter support for Tesseract
 
-### 4. `backend/routers/ocr_example.py` (Optional)
+### 4. `src/backend/routers/ocr_example.py` (Optional)
 Example router showing how to use OCR safely:
 - Checks OCR availability before processing
 - Returns HTTP 501 when OCR is disabled
@@ -38,19 +38,19 @@ Example router showing how to use OCR safely:
 ### Default (No OCR)
 ```bash
 # Install core dependencies only
-pip install -r backend/requirements.txt
+pip install -r src/backend/requirements.txt
 
 # Start server - boots successfully without OCR deps
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --app-dir src
 ```
 
 ### With OCR Enabled
 ```bash
 # Install both core and OCR dependencies
-pip install -r backend/requirements.txt -r backend/requirements-ocr.txt
+pip install -r src/backend/requirements.txt -r src/backend/requirements-ocr.txt
 
 # Set environment variable and start server
-ENABLE_OCR=true uvicorn backend.main:app --host 0.0.0.0 --port 8000
+ENABLE_OCR=true uvicorn backend.main:app --host 0.0.0.0 --port 8000 --app-dir src
 ```
 
 ### Docker with OCR
@@ -65,12 +65,12 @@ COPY . .
 
 # Install all dependencies
 RUN python -m pip install --upgrade pip && \
-    pip install -r backend/requirements.txt -r backend/requirements-ocr.txt
+    pip install -r src/backend/requirements.txt -r src/backend/requirements-ocr.txt
 
 # Enable OCR
 ENV ENABLE_OCR=true
 
-CMD ["uvicorn","backend.main:app","--host","0.0.0.0","--port","8000"]
+CMD ["uvicorn","backend.main:app","--host","0.0.0.0","--port","8000","--app-dir","src"]
 ```
 
 ## API Usage
@@ -124,7 +124,7 @@ async def upload_image_ocr(file: UploadFile = File(...)):
 ### Boot Test (Default)
 ```bash
 # Should boot successfully without OCR dependencies
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --app-dir src
 curl http://localhost:8000/health  # Should return 200 OK
 ```
 
@@ -138,10 +138,10 @@ curl -F "file=@image.png" http://localhost:8000/api/upload-image-ocr
 ### OCR Enabled Test
 ```bash
 # Install OCR dependencies first
-pip install -r backend/requirements-ocr.txt
+pip install -r src/backend/requirements-ocr.txt
 
 # Start with OCR enabled
-ENABLE_OCR=true uvicorn backend.main:app --host 0.0.0.0 --port 8000
+ENABLE_OCR=true uvicorn backend.main:app --host 0.0.0.0 --port 8000 --app-dir src
 
 # Should process images (requires tesseract-ocr system binary)
 curl -F "file=@image.png" http://localhost:8000/api/upload-image-ocr
@@ -162,11 +162,11 @@ Keep existing build commands as they are:
 # Build
 if command -v python3 >/dev/null 2>&1; then PY=python3; else PY=python; fi; \
 $PY -m pip install --upgrade pip setuptools wheel && \
-$PY -m pip install -r backend/requirements.txt && \
+$PY -m pip install -r src/backend/requirements.txt && \
 cd frontend && npm ci && NEXT_PUBLIC_API_URL=/ npm run build && npm run export && cd ..
 
 # Start
-uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+uvicorn backend.main:app --host 0.0.0.0 --port $PORT --app-dir src
 ```
 
 ### Docker with OCR

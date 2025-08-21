@@ -3,7 +3,21 @@
 from __future__ import annotations
 from typing import Iterable, List, Optional
 
-from app.core.llm_adapter import LLMAdapter
+from backend.app.core.llm_adapter import LLMAdapter
+
+
+class GeminiClient:
+    """Minimal Gemini client used only for tests.
+
+    The real implementation would call the external Gemini API.  Here we just
+    provide the interface that tests expect and allow it to be easily mocked.
+    """
+
+    def generate(self, prompt: str, *, system: str | None = None, **_: object) -> str:
+        return prompt
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [[float(len(t))] for t in texts]
 
 # Singleton-style adapter for simple apps; swap to DI if you prefer.
 _llm: LLMAdapter | None = None

@@ -2,7 +2,6 @@
 Test module for the LLMService wrapper class.
 """
 
-import pytest
 import asyncio
 import sys
 import os
@@ -14,8 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from llm_service import LLMService
 
 
-def test_llm_service_initialization():
+def test_llm_service_initialization(monkeypatch):
     """Test that LLMService initializes correctly."""
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
     service = LLMService()
     assert hasattr(service, 'adapter')
     assert hasattr(service, 'provider')
@@ -23,8 +23,9 @@ def test_llm_service_initialization():
     assert hasattr(service, 'get_provider_info')
 
 
-def test_get_provider_info():
+def test_get_provider_info(monkeypatch):
     """Test provider information retrieval."""
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
     service = LLMService()
     info = service.get_provider_info()
     
@@ -38,26 +39,27 @@ def test_get_provider_info():
     assert isinstance(info["ollama_available"], bool)
 
 
-@pytest.mark.asyncio
-async def test_analyze_contract():
+def test_analyze_contract(monkeypatch):
     """Test contract analysis functionality."""
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
     service = LLMService()
-    
+
     # Mock the adapter's analyze_contract method
     mock_result = {
         "summary": "Test summary",
         "risks": ["Test risk"],
         "dates": [],
-        "error": None
+        "error": None,
     }
-    
-    with patch.object(service.adapter, 'analyze_contract', new_callable=AsyncMock) as mock_analyze:
-        mock_analyze.return_value = mock_result
-        
-        result = await service.analyze_contract("Test contract text")
-        
+
+    async def fake_analyze(text: str):
+        return mock_result
+
+    with patch.object(service.adapter, "analyze_contract", AsyncMock(side_effect=fake_analyze)) as mock_analyze:
+        result = asyncio.run(service.analyze_contract("Test contract text"))
+
         assert result == mock_result
-        mock_analyze.assert_called_once_with("Test contract text")
+        mock_analyze.assert_awaited_once_with("Test contract text")
 
 
 if __name__ == "__main__":

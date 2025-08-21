@@ -1,7 +1,7 @@
 """
-NOTE: These tests are skipped because Ollama functionality has been removed 
+NOTE: These tests are skipped because Ollama functionality has been removed
 from services/llm.py in favor of a Gemini-only implementation.
-Ollama support is still available through the LLMAdapter in app/core/llm_adapter.py.
+Ollama support is still available through the LLMAdapter in backend/app/core/llm_adapter.py.
 """
 
 if __package__ is None or __package__ == "":
