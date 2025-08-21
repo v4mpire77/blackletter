@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from .routers import contracts, dashboard
 
 app = FastAPI(title="Blackletter Systems API")
@@ -17,15 +18,11 @@ app.add_middleware(
 app.include_router(contracts.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 
-# Root route for basic status check
+# Root route redirects to API docs
 @app.get("/")
 async def root():
-    """Provide a simple landing response with service info."""
-    return {
-        "service": "blackletter-backend",
-        "status": "ok",
-        "docs": "/docs",
-    }
+    """Redirect to interactive API documentation."""
+    return RedirectResponse(url="/docs")
 
 # Health check
 @app.get("/health")
