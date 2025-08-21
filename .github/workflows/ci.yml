@@ -12,6 +12,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Install Rust
         run: |
           export CARGO_HOME=$HOME/.cargo
@@ -20,4 +25,10 @@ jobs:
           source $HOME/.cargo/env
           rustc --version
 
-      # Other steps can be added here
+      - name: Upgrade pip
+        run: pip install --upgrade pip
+
+      - name: Install dependencies
+        run: |
+          pip install maturin
+          pip install -r backend/requirements.txt
