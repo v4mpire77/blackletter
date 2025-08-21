@@ -41,6 +41,52 @@ setx OPENAI_API_KEY "<YOUR_OPENAI_KEY>"  # optional
 setx PROVIDER_ORDER "gemini,openai"
 ```
 
+## Ollama Migration Guide
+
+For cost savings and privacy, you can migrate from cloud LLM providers (Gemini/OpenAI) to local Ollama models:
+
+### 1. Install Ollama
+```powershell
+# Download and install from https://ollama.ai
+ollama --version
+```
+
+### 2. Pull a Compatible Model
+```powershell
+# Recommended models for contract analysis
+ollama pull llama3.1      # 4.7GB - good balance of speed/quality
+ollama pull llama3.1:8b   # 8GB - higher quality
+ollama pull mistral       # 4.1GB - faster alternative
+```
+
+### 3. Configure Environment Variables
+```powershell
+# Switch to Ollama as primary provider
+setx LLM_PROVIDER "ollama"
+setx OLLAMA_URL "http://localhost:11434"  # default Ollama URL
+setx OLLAMA_MODEL "llama3.1"              # or your preferred model
+
+# Optional: Set fallback providers
+setx PROVIDER_ORDER "ollama,gemini,openai"
+```
+
+### 4. Start Ollama Server
+```powershell
+ollama serve
+```
+
+### 5. Restart Backend
+```powershell
+# Your backend will now use Ollama for contract analysis
+uvicorn main:app --reload --port 8000
+```
+
+### Benefits of Ollama Migration
+- **Cost Reduction**: No per-token API costs
+- **Privacy**: Data stays local, never sent to external APIs
+- **Reliability**: No rate limits or API downtime
+- **Customization**: Fine-tune models for your specific contract types
+
 ### Frontend Setup
 
 ```powershell
