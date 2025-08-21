@@ -1,8 +1,1 @@
-chromadb
-openai
-pydantic
-fastapi
-uvicorn
-pypdf
-python-docx
-tiktoken
+-r backend/requirements.txt
