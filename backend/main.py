@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 
 from .routers import contracts, issues, coverage, redlines, gemini
+# from .routers import ocr_example  # optional OCR example
 # from .routers import llm_test  # optional
 
 load_dotenv()  # only needed locally
@@ -31,6 +32,8 @@ app.include_router(coverage.router,  prefix="/api", tags=["coverage"])
 app.include_router(redlines.router,  prefix="/api", tags=["redlines"])
 # Gemini endpoint for prompt testing
 app.include_router(gemini.router,    prefix="/api", tags=["gemini"])
+# OCR example endpoint (optional) - uncomment the import and this line to enable
+# app.include_router(ocr_example.router, prefix="/api", tags=["ocr"])
 # app.include_router(llm_test.router,  prefix="/api", tags=["llm"])
 
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), "../frontend/out")
