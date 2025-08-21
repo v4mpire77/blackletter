@@ -9,8 +9,7 @@ from pathlib import Path
 from typing import Iterable, List
 
 import chromadb
-from openai import OpenAI
-import tiktoken
+import google.generativeai as genai
 from pypdf import PdfReader
 from docx import Document
 
@@ -38,86 +37,44 @@ def read_text(path: Path) -> str:
 
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> List[str]:
-    """Split text into token chunks with overlap."""
-    encoding = tiktoken.get_encoding("cl100k_base")
-    tokens = encoding.encode(text)
+    """Split text into simple character chunks with overlap."""
     chunks: List[str] = []
     step = chunk_size - overlap
-    for i in range(0, len(tokens), step):
-        chunk_tokens = tokens[i : i + chunk_size]
-        chunks.append(encoding.decode(chunk_tokens))
+    for i in range(0, len(text), step):
+        chunk = text[i : i + chunk_size]
+        if chunk.strip():  # Only add non-empty chunks
+            chunks.append(chunk)
     return chunks
 
 
-def embed_texts(client: OpenAI, model: str, texts: List[str]) -> List[List[float]]:
-    """Embed a list of texts using OpenAI embeddings API."""
-    embeddings: List[List[float]] = []
-    for i in range(0, len(texts), 100):
-        batch = texts[i : i + 100]
-        resp = client.embeddings.create(model=model, input=batch)
-        embeddings.extend([d.embedding for d in resp.data])
-    return embeddings
+def embed_texts(model: str, texts: List[str]) -> List[List[float]]:
+    """Placeholder for text embeddings - Gemini doesn't provide embeddings API yet."""
+    raise NotImplementedError(
+        "Embedding functionality is not available with Gemini. "
+        "This feature is disabled in the current Gemini-only configuration."
+    )
 
 
-def index_contracts(client: chromadb.PersistentClient, oai: OpenAI, model: str, file_path: Path) -> int:
+def index_contracts(client: chromadb.PersistentClient, model: str, file_path: Path) -> int:
     """Index contract chunks from a JSONL file."""
-    collection = client.get_or_create_collection("contracts")
-    ids: List[str] = []
-    docs: List[str] = []
-    with file_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            item = json.loads(line)
-            ids.append(str(item["chunk_id"]))
-            docs.append(item["text"])
-    if docs:
-        embeddings = embed_texts(oai, model, docs)
-        collection.upsert(ids=ids, documents=docs, embeddings=embeddings)
-    return collection.count()
+    raise NotImplementedError(
+        "Contract indexing is not available with Gemini. "
+        "This feature is disabled in the current Gemini-only configuration."
+    )
 
 
-def index_authority(client: chromadb.PersistentClient, oai: OpenAI, model: str, kb_dir: Path) -> int:
+def index_authority(client: chromadb.PersistentClient, model: str, kb_dir: Path) -> int:
     """Index authority documents located in kb_dir."""
-    collection = client.get_or_create_collection("authority")
-    if not kb_dir.exists():
-        return collection.count()
-    for path in sorted(kb_dir.iterdir()):
-        if not path.is_file():
-            continue
-        text = read_text(path)
-        if not text.strip():
-            continue
-        chunks = chunk_text(text)
-        ids = [f"{path.stem}:{i}" for i in range(len(chunks))]
-        metadatas = [{"source": str(path), "chunk": i} for i in range(len(chunks))]
-        embeddings = embed_texts(oai, model, chunks)
-        collection.upsert(ids=ids, documents=chunks, embeddings=embeddings, metadatas=metadatas)
-    return collection.count()
+    raise NotImplementedError(
+        "Authority document indexing is not available with Gemini. "
+        "This feature is disabled in the current Gemini-only configuration."
+    )
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parent.parent
-    parser = argparse.ArgumentParser(description="Build Chroma index")
-    parser.add_argument("--kb-dir", default=root / "data" / "kb", type=Path)
-    parser.add_argument("--chunks-file", default=root / "data" / "chunks.jsonl", type=Path)
-    parser.add_argument(
-        "--model",
-        default="text-embedding-3-small",
-        choices=["text-embedding-3-small", "text-embedding-3-large"],
-    )
-    parser.add_argument("--persist-dir", default=Path(__file__).resolve().parent / "chroma", type=Path)
-    args = parser.parse_args()
-
-    chroma_client = chromadb.PersistentClient(path=str(args.persist_dir))
-    oai = OpenAI()
-
-    contracts_count = index_contracts(chroma_client, oai, args.model, args.chunks_file)
-    authority_count = index_authority(chroma_client, oai, args.model, args.kb_dir)
-
-    print(f"contracts collection: {contracts_count}")
-    print(f"authority collection: {authority_count}")
+    print("RAG indexing is disabled in the current Gemini-only configuration.")
+    print("Embedding functionality is not available with Gemini API.")
+    return
 
 
 if __name__ == "__main__":  # pragma: no cover
