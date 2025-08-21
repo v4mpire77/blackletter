@@ -1,3 +1,4 @@
+git checkout pr-104   # or your working branch name
 git add render.yaml
-git commit -m "Fix render.yaml merge conflicts and startCommand"
+git commit -m "fix(render): resolve merge markers in render.yaml and set correct build/start commands"
 git push
