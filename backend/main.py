@@ -2,9 +2,9 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
-from dotenv import load_dotenv
+from fastapi.responses import FileResponse, RedirectResponse # Added RedirectResponse
+import os # Added import
+from dotenv import load_dotenv # Added import
 
 from routers import contracts, issues, coverage, redlines, gemini
 # from .routers import ocr_example  # optional OCR example
@@ -16,7 +16,7 @@ app = FastAPI(title="Blackletter")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten to your frontend origin later
+    allow_origins=["*"],  # lock down later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,7 +27,22 @@ FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), "../frontend/out")
 
 # Mount the frontend static files if the directory exists
 if os.path.exists(FRONTEND_BUILD_DIR):
-    app.mount("/", StaticFiles(directory=FRONTEND_BUILD_DIR, html=True), name="frontend")
+    # Mount the main frontend assets
+    app.mount("/app", StaticFiles(directory=FRONTEND_BUILD_DIR, html=True), name="app")
+
+    # Send root to the UI
+    @app.get("/")
+    def root():
+        return RedirectResponse("/app")
+
+    # Serve frontend for all other paths if it's mounted, for client-side routing
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # This is a fallback for client-side routing,
+        # ensuring all unmatched paths serve the index.html
+        index_path = os.path.join(FRONTEND_BUILD_DIR, "index.html")
+        return FileResponse(index_path)
+
 
 @app.get("/health")
 def health():
@@ -46,16 +61,5 @@ if ENABLE_OCR:
     try:
         from .routers import ocr
         app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
-    except ImportError:
-        # OCR dependencies not available - OCR functionality will be disabled
-        pass
-
-# app.include_router(llm_test.router,  prefix="/api", tags=["llm"])
-
-# Serve frontend for all other paths if it's mounted
-# This ensures client-side routing works for Single Page Applications
-if os.path.exists(FRONTEND_BUILD_DIR):
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        index_path = os.path.join(FRONTEND_BUILD_DIR, "index.html")
-        return FileResponse(index_path)
+    except
+    
