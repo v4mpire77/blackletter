@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { API_URL, apiGet } from "@/lib/api";
 import { ResultsDashboard } from "@/components/results-dashboard";
 import { FileUpload } from "@/components/file-upload";
