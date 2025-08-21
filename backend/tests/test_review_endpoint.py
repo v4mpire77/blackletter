@@ -2,7 +2,14 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from backend.main import app
+if __package__ is None or __package__ == "":
+    import os
+    import sys
+
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    from backend.main import app  # type: ignore  # pragma: no cover
+else:
+    from ..main import app
 
 
 def test_review_endpoint_returns_results(monkeypatch):
