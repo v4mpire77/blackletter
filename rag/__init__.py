@@ -3,9 +3,9 @@ import os
 from typing import Any, Dict, List
 
 try:
-    from openai import OpenAI  # type: ignore
-except Exception:  # pragma: no cover - openai may not be installed
-    OpenAI = None  # type: ignore
+    import google.generativeai as genai  # type: ignore
+except Exception:  # pragma: no cover - gemini may not be installed
+    genai = None  # type: ignore
 
 from .prompts import ANSWER_WITH_CITATIONS
 
@@ -27,13 +27,13 @@ def generate_answer(
         Each context dict should have keys: ``source_id``, ``page``, ``content`` and
         optionally ``score``.
     model: str
-        The OpenAI model to use (``gpt-4.1`` or ``gpt-4o-mini`` by default).
+        The Gemini model to use (``gemini-2.0-flash`` by default).
     threshold: float
         Minimum retrieval score required to attempt an answer. If all contexts
         fall below this score, the function refuses to answer.
     """
 
-    model = model or os.getenv("RAG_MODEL", "gpt-4o-mini")
+    model = model or os.getenv("RAG_MODEL", "gemini-2.0-flash")
 
     best_score = max((c.get("score", 0.0) for c in contexts), default=0.0)
     if best_score < threshold or not contexts:
@@ -50,17 +50,24 @@ def generate_answer(
         question=query, context="\n".join(context_lines)
     )
 
-    if OpenAI is None:  # pragma: no cover - runtime safeguard
-        raise RuntimeError("openai package not available")
+    if genai is None:  # pragma: no cover - runtime safeguard
+        raise RuntimeError("google-generativeai package not available")
 
-    client = OpenAI()
-    # Call the Responses API and extract text robustly
-    response = client.responses.create(model=model, input=prompt)
+    # Configure Gemini API
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY environment variable is required")
+    
+    genai.configure(api_key=api_key)
+    gemini_model = genai.GenerativeModel(model)
+    
+    # Generate response using Gemini
+    response = gemini_model.generate_content(prompt)
     text: str = ""
     try:
-        text = response.output[0].content[0].text  # type: ignore[attr-defined]
+        text = response.text or ""
     except Exception:  # pragma: no cover - fallback parsing
-        text = getattr(response, "output_text", str(response))
+        text = str(response)
 
     try:
         data = json.loads(text)

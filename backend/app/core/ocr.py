@@ -1,14 +1,25 @@
 import asyncio
-import pdfplumber
-import pytesseract
-from PIL import Image
-import io
 import os
 import platform
+
+# Feature flag for OCR availability
+ENABLE_OCR = os.getenv("ENABLE_OCR", "false").lower() in {"1", "true", "yes"}
+
+def ocr_available() -> bool:
+    """Check if OCR functionality is available."""
+    return ENABLE_OCR
 
 class OCRProcessor:
     def __init__(self):
         """Configure pytesseract based on the current platform."""
+        if not ENABLE_OCR:
+            raise RuntimeError("OCR is disabled. Set ENABLE_OCR=true and install OCR deps.")
+        
+        try:
+            import pytesseract
+        except ImportError:
+            raise RuntimeError("OCR dependencies not installed. Run: pip install -r requirements-ocr.txt")
+        
         tesseract_cmd = os.getenv("TESSERACT_CMD")
 
         if not tesseract_cmd:
@@ -24,6 +35,17 @@ class OCRProcessor:
 
     def _process_pdf(self, file_content: bytes) -> str:
         """Blocking PDF/OCR logic split into a helper for thread execution."""
+        if not ENABLE_OCR:
+            raise RuntimeError("OCR is disabled. Set ENABLE_OCR=true and install OCR deps.")
+        
+        try:
+            import pdfplumber
+            import pytesseract
+            from PIL import Image
+            import io
+        except ImportError as e:
+            raise RuntimeError(f"OCR dependencies not installed. Run: pip install -r requirements-ocr.txt. Missing: {e}")
+        
         with pdfplumber.open(io.BytesIO(file_content)) as pdf:
             text_content = []
 
@@ -44,6 +66,9 @@ class OCRProcessor:
 
     async def extract_text(self, file_content: bytes) -> str:
         """Extract text from a PDF file using pdfplumber and pytesseract for images."""
+        if not ENABLE_OCR:
+            raise RuntimeError("OCR is disabled. Set ENABLE_OCR=true and install OCR deps.")
+        
         try:
             return await asyncio.to_thread(self._process_pdf, file_content)
         except Exception as e:
