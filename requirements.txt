@@ -3,7 +3,7 @@ fastapi
 google-generativeai
 httpx==0.26.0
 openai
-pydantic
+pydantic==2.8.2
 pypdf
 python-docx
 python-multipart

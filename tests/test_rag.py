@@ -15,7 +15,7 @@ def test_refuses_on_low_score():
 
 
 def test_generate_answer_with_mock(monkeypatch):
-    def fake_create(model, input):
+    def fake_generate_content(prompt):
         payload = {
             "answer": "Answer.",
             "citations": [
@@ -24,19 +24,20 @@ def test_generate_answer_with_mock(monkeypatch):
             ],
             "confidence": 0.8,
         }
-        return SimpleNamespace(
-            output=[
-                SimpleNamespace(
-                    content=[SimpleNamespace(text=json.dumps(payload))]
-                )
-            ]
-        )
+        return SimpleNamespace(text=json.dumps(payload))
 
-    class FakeClient:
-        def __init__(self):
-            self.responses = SimpleNamespace(create=fake_create)
+    class FakeGeminiModel:
+        def generate_content(self, prompt):
+            return fake_generate_content(prompt)
 
-    monkeypatch.setattr(rag, "OpenAI", lambda: FakeClient())
+    def fake_GenerativeModel(model_name):
+        return FakeGeminiModel()
+
+    # Mock the genai module and environment
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
+    if hasattr(rag, 'genai') and rag.genai is not None:
+        monkeypatch.setattr(rag.genai, "configure", lambda api_key: None)
+        monkeypatch.setattr(rag.genai, "GenerativeModel", fake_GenerativeModel)
 
     contexts = [
         {"source_id": "A", "page": 1, "content": "foo", "score": 0.9},
@@ -52,23 +53,26 @@ def test_preserves_existing_citations(monkeypatch):
     """If the model returns a single citation, it should be kept and a
     second one should be added from the remaining context."""
 
-    def fake_create(model, input):
+    def fake_generate_content(prompt):
         payload = {
             "answer": "Answer.",
             "citations": [{"source_id": "A", "page": 1, "quote": "foo"}],
             "confidence": 0.9,
         }
-        return SimpleNamespace(
-            output=[
-                SimpleNamespace(content=[SimpleNamespace(text=json.dumps(payload))])
-            ]
-        )
+        return SimpleNamespace(text=json.dumps(payload))
 
-    class FakeClient:
-        def __init__(self):
-            self.responses = SimpleNamespace(create=fake_create)
+    class FakeGeminiModel:
+        def generate_content(self, prompt):
+            return fake_generate_content(prompt)
 
-    monkeypatch.setattr(rag, "OpenAI", lambda: FakeClient())
+    def fake_GenerativeModel(model_name):
+        return FakeGeminiModel()
+
+    # Mock the genai module and environment
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
+    if hasattr(rag, 'genai') and rag.genai is not None:
+        monkeypatch.setattr(rag.genai, "configure", lambda api_key: None)
+        monkeypatch.setattr(rag.genai, "GenerativeModel", fake_GenerativeModel)
 
     contexts = [
         {"source_id": "A", "page": 1, "content": "foo", "score": 0.9},

@@ -1,101 +1,263 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { API_URL, apiGet } from '@/lib/api';
-
-interface ReviewResult {
-  summary: string;
-  risks: string[];
-}
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { ArrowRightIcon, DocumentCheckIcon, ShieldCheckIcon, ChartBarIcon } from '@heroicons/react/24/outline'
+import { FileUpload } from '@/components/file-upload'
+import { ResultsDashboard } from '@/components/ResultsDashboard'
+import { ProcessingStatus } from '@/components/ProcessingStatus'
+import { SkipLinks } from '@/components/SkipLinks'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useContractAnalysis } from '@/hooks/useContractAnalysis'
+import { useContractKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
-  const [analysis, setAnalysis] = useState<ReviewResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [reportUrl, setReportUrl] = useState<string | null>(null);
-  const apiBase = API_URL;
+  const {
+    isAnalyzing,
+    uploadStatus,
+    analysisProgress,
+    result,
+    error,
+    analyzeContract,
+    resetAnalysis
+  } = useContractAnalysis()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
-    setLoading(true);
-    setError(null);
-    
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const uploadRes = await fetch(`${apiBase}/api/contracts`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!uploadRes.ok) {
-        throw new Error(await uploadRes.text());
-      }
-      const { id } = await uploadRes.json();
-      const data: ReviewResult = await apiGet(`/api/contracts/${id}/findings`);
-      setAnalysis(data);
-      setReportUrl(`${apiBase}/api/contracts/${id}/report`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
+  // Keyboard shortcuts
+  useContractKeyboardShortcuts({
+    onUpload: () => {
+      // Focus the file upload area
+      const uploadArea = document.getElementById('contract-upload')
+      uploadArea?.focus()
+    },
+    onHelp: () => {
+      // Could open a help modal
+      console.log('Help shortcuts: Cmd+U (Upload), Cmd+E (Export), Cmd+Shift+D (Dark mode)')
     }
-  };
+  })
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file)
+    analyzeContract(file)
+  }
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null)
+    resetAnalysis()
+  }
+
+  const handleExport = (format: 'pdf' | 'json' | 'csv') => {
+    if (!result) return
+    
+    // For demo purposes, just trigger a download
+    const data = format === 'json' ? JSON.stringify(result, null, 2) : 'Export functionality would be implemented here'
+    const blob = new Blob([data], { type: format === 'json' ? 'application/json' : 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `contract-analysis.${format}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const features = [
+    {
+      icon: DocumentCheckIcon,
+      title: 'AI-Powered Analysis',
+      description: 'Advanced natural language processing to identify risks, compliance issues, and key clauses in your contracts.'
+    },
+    {
+      icon: ShieldCheckIcon,
+      title: 'GDPR & Legal Compliance',
+      description: 'Comprehensive checks against UK/EU regulations, data protection requirements, and industry standards.'
+    },
+    {
+      icon: ChartBarIcon,
+      title: 'Detailed Reporting',
+      description: 'Professional reports with risk assessments, recommendations, and actionable next steps for your legal team.'
+    }
+  ]
 
   return (
-    <main className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-8">Blackletter Systems Contract Review</h1>
+    <>
+      <SkipLinks />
       
-      <form onSubmit={handleSubmit} className="mb-8">
-        <div className="mb-4">
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={!file || loading}
-          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50"
-        >
-          {loading ? 'Analyzing...' : 'Analyze Contract'}
-        </button>
-      </form>
-
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
-          {error}
-        </div>
-      )}
-
-      {analysis && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Analysis Results</h2>
-          <h3 className="font-medium mb-2">Summary</h3>
-          <p className="mb-4">{analysis.summary}</p>
-          <h3 className="font-medium mb-2">Key Risks</h3>
-          <ul className="list-disc pl-5 space-y-1">
-            {analysis.risks.map((risk, idx) => (
-              <li key={idx}>{risk}</li>
-            ))}
-          </ul>
-          {reportUrl && (
-            <a
-              href={reportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline block mt-4"
+      <main id="main-content" className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-100 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-800">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-500/5 to-legal-navy/5" />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-16"
             >
-              View report
-            </a>
-          )}
-        </div>
-      )}
-    </main>
-  );
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-legal-navy dark:text-white mb-6">
+                Professional Contract{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-legal-gold">
+                  Analysis
+                </span>
+              </h1>
+              <p className="text-xl text-neutral-600 dark:text-neutral-300 max-w-3xl mx-auto leading-relaxed">
+                Leverage advanced AI to identify risks, ensure compliance, and optimize your contracts with professional-grade analysis trusted by UK and EU legal professionals.
+              </p>
+            </motion.div>
+
+            {/* Features Grid */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="grid md:grid-cols-3 gap-8 mb-16"
+            >
+              {features.map((feature, index) => (
+                <Card key={index} variant="elevated" className="text-center group hover:shadow-legal transition-all duration-300">
+                  <CardContent className="p-8">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400 mb-6 group-hover:scale-110 transition-transform duration-300">
+                      <feature.icon className="h-8 w-8" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground mb-4">{feature.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Main Upload Section */}
+        <section id="file-upload" className="py-16">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              {!result && !isAnalyzing && (
+                <Card variant="elevated" className="mb-8">
+                  <CardHeader className="text-center">
+                    <CardTitle className="text-2xl">Upload Your Contract</CardTitle>
+                    <p className="text-muted-foreground">
+                      Upload a PDF contract to begin professional analysis
+                    </p>
+                  </CardHeader>
+                  <CardContent className="px-8 pb-8">
+                    <FileUpload
+                      onFileSelect={handleFileSelect}
+                      uploadStatus={uploadStatus}
+                      selectedFile={selectedFile}
+                      onRemoveFile={handleRemoveFile}
+                      isLoading={isAnalyzing}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mb-8"
+                >
+                  <Card variant="danger" className="border-red-200 dark:border-red-800">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                          <DocumentCheckIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-red-800 dark:text-red-200">Analysis Failed</h3>
+                          <p className="text-red-600 dark:text-red-300 mt-1">{error}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <Button variant="outline" onClick={resetAnalysis}>
+                          Try Again
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {isAnalyzing && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mb-8"
+                >
+                  <ProcessingStatus progress={analysisProgress} />
+                </motion.div>
+              )}
+
+              {result && (
+                <motion.div
+                  id="results"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <ResultsDashboard
+                    analysis={result}
+                    onExport={handleExport}
+                  />
+                  
+                  <div className="mt-8 text-center">
+                    <Button variant="outline" onClick={resetAnalysis}>
+                      Analyze Another Contract
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Additional Info Section */}
+        {!result && !isAnalyzing && (
+          <section className="py-16 bg-neutral-50 dark:bg-neutral-900/50">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+              >
+                <h2 className="text-3xl font-bold text-foreground mb-8">
+                  Trusted by Legal Professionals
+                </h2>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <Card>
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-lg mb-3">GDPR Compliance</h3>
+                      <p className="text-muted-foreground">
+                        Comprehensive analysis against UK and EU data protection regulations, ensuring your contracts meet the highest compliance standards.
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-lg mb-3">Risk Assessment</h3>
+                      <p className="text-muted-foreground">
+                        Advanced AI identifies potential legal risks, liability issues, and areas requiring attention from your legal team.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="mt-8">
+                  <p className="text-sm text-muted-foreground">
+                    Professional analysis • Secure processing • Detailed reporting
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          </section>
+        )}
+      </main>
+    </>
+  )
 }
