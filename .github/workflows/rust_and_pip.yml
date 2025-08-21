@@ -10,6 +10,9 @@ on:
 jobs:
   setup:
     runs-on: ubuntu-latest
+    env:
+      CARGO_HOME: ${{ env.HOME }}/.cargo
+      RUSTUP_HOME: ${{ env.HOME }}/.rustup
 
     steps:
       - name: Checkout repository
@@ -17,10 +20,15 @@ jobs:
 
       - name: Install Rust
         run: |
+
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$CARGO_HOME/env"
+
           echo "CARGO_HOME=$HOME/.cargo" >> $GITHUB_ENV
           echo "RUSTUP_HOME=$HOME/.rustup" >> $GITHUB_ENV
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
           rustc --version
 
       - name: Install Python dependencies

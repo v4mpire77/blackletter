@@ -6,6 +6,27 @@ services:
     plan: free
     pythonVersion: 3.11.9
     buildCommand: |
+codex/fix-rust-toolchain-writable-paths
+        # Define writable paths for Cargo and Rustup
+        export CARGO_HOME=$HOME/.cargo
+        export RUSTUP_HOME=$HOME/.rustup
+
+        # Install Rust toolchain
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source $CARGO_HOME/env
+        rustc --version
+
+        # Install Python deps
+        pip install --upgrade pip
+        pip install maturin
+        pip install -r backend/requirements.txt
+
+        # Install Node + build frontend
+        cd frontend
+        npm install
+        npm run build
+        cd ..
+
  codex/fix-rust-toolchain-writable-paths-9hjp1m
         # Define writable paths for Cargo and Rustup
         export CARGO_HOME="$HOME/.cargo"
@@ -16,6 +37,7 @@ services:
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         export PATH="$CARGO_HOME/bin:$PATH"
         rustc --version
+main
 
         # Install Python deps
         pip install --upgrade pip

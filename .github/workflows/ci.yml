@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CARGO_HOME: ${{ env.HOME }}/.cargo
+      RUSTUP_HOME: ${{ env.HOME }}/.rustup
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -19,6 +22,13 @@ jobs:
 
       - name: Install Rust
         run: |
+codex/fix-rust-toolchain-writable-paths
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$CARGO_HOME/env"
+          rustc --version
+
+      # Other steps can be added here
+
           echo "CARGO_HOME=$HOME/.cargo" >> $GITHUB_ENV
           echo "RUSTUP_HOME=$HOME/.rustup" >> $GITHUB_ENV
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -33,5 +43,4 @@ jobs:
       - name: Install dependencies
         run: |
           pip install maturin
-          pip install -r backend/requirements.txt
-main
+          pip install -r backend/requirements.txtmain
