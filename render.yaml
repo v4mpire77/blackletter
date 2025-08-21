@@ -7,11 +7,12 @@ services:
     runtime: python
     buildCommand: |
       pip install --upgrade pip
-      pip install -r src/backend/requirements.txt
+      cd src/backend
+      pip install -r requirements.txt
     startCommand: |
-      export PYTHONPATH=$PYTHONPATH:$PWD/src
       cd src
-      gunicorn -k uvicorn.workers.UvicornWorker backend.main:app --bind 0.0.0.0:$PORT --workers 2
+      export PYTHONPATH=$PYTHONPATH:$PWD
+      uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: GEMINI_API_KEY
         sync: false
