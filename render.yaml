@@ -8,14 +8,4 @@ services:
     root: backend
   buildCommand: pip install -r backend/requirements.txt
   startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.main:app --bind 0.0.0.0:$PORT --workers 2
-    healthCheckPath: /health
-  - type: web
-    name: blackletter-rag
-    region: oregon
-    plan: free
-    branch: main
-    runtime: python
-    root: .
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: uvicorn rag.api:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
+  healthCheckPath: /health
