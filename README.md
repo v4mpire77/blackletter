@@ -41,6 +41,34 @@ setx OPENAI_API_KEY "<YOUR_OPENAI_KEY>"  # optional
 setx PROVIDER_ORDER "gemini,openai"
 ```
 
+## OCR Feature (Optional)
+
+OCR functionality is **disabled by default** to keep deployments lightweight. When needed, it can be enabled:
+
+### Enable OCR (Local Development)
+```powershell
+# Install OCR dependencies
+pip install -r requirements-ocr.txt
+
+# Install Tesseract system binary
+# Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+# macOS: brew install tesseract
+# Linux: apt-get install tesseract-ocr
+
+# Enable OCR and restart server
+setx ENABLE_OCR "true"
+uvicorn main:app --reload --port 8000
+```
+
+### OCR API Usage
+```bash
+# Extract text from PDF
+curl -X POST -F "file=@document.pdf" http://localhost:8000/api/ocr/extract
+# Returns: {"ok": true, "chars": 1234, "text": "extracted text..."}
+```
+
+**Note:** OCR requires heavy dependencies. For production deployment on Render/Heroku, leave `ENABLE_OCR` unset (disabled) for faster, more reliable builds.
+
 ## Ollama Migration Guide
 
 For cost savings and privacy, you can migrate from cloud LLM providers (Gemini/OpenAI) to local Ollama models:
@@ -127,8 +155,8 @@ export TESSERACT_CMD=/usr/bin/tesseract
 ✅ Ship the smallest slice: upload → extract → summarise → show.
 ✅ Windows-only instructions.
 ✅ Clear errors, simple UI, one happy path.
+✅ **NEW:** Optional OCR feature (disabled by default for production stability).
 ❌ Don't add auth/payments yet.
-❌ Don't attempt OCR or RAG today.
 ❌ Don't over-engineer file storage.
 
 ## Testing
