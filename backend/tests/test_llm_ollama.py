@@ -1,3 +1,9 @@
+"""
+NOTE: These tests are skipped because Ollama functionality has been removed 
+from services/llm.py in favor of a Gemini-only implementation.
+Ollama support is still available through the LLMAdapter in app/core/llm_adapter.py.
+"""
+
 if __package__ is None or __package__ == "":
     import os
     import sys
@@ -15,6 +21,7 @@ class DummyOllamaClient:
         return "Ollama response"
 
 
+@pytest.mark.skip(reason="Ollama functionality removed from services/llm.py - use LLMAdapter instead")
 def test_ollama_generate_text(monkeypatch):
     """Test Ollama provider through generate_text function"""
     monkeypatch.setenv("PROVIDER_ORDER", "ollama")
@@ -23,6 +30,7 @@ def test_ollama_generate_text(monkeypatch):
     assert result == "Ollama response"
 
 
+@pytest.mark.skip(reason="Ollama functionality removed from services/llm.py - use LLMAdapter instead")
 def test_ollama_client_basic():
     """Test OllamaClient basic functionality with mocked requests"""
     with patch('requests.post') as mock_post:
@@ -45,6 +53,7 @@ def test_ollama_client_basic():
         assert call_args[1]['json']['stream'] is False
 
 
+@pytest.mark.skip(reason="Ollama functionality removed from services/llm.py - use LLMAdapter instead")
 def test_ollama_client_with_system():
     """Test OllamaClient with system message"""
     with patch('requests.post') as mock_post:
@@ -65,6 +74,7 @@ def test_ollama_client_with_system():
         assert call_args[1]['json']['prompt'] == expected_prompt
 
 
+@pytest.mark.skip(reason="Ollama functionality removed from services/llm.py - use LLMAdapter instead")
 def test_ollama_client_error_handling():
     """Test OllamaClient error handling"""
     with patch('requests.post') as mock_post:
@@ -79,6 +89,7 @@ def test_ollama_client_error_handling():
         assert "Ollama error: Connection error" in str(exc_info.value)
 
 
+@pytest.mark.skip(reason="Ollama functionality removed from services/llm.py - use LLMAdapter instead")
 def test_ollama_model_prefs():
     """Test that Ollama model can be configured via environment"""
     import os
@@ -101,6 +112,7 @@ def test_ollama_model_prefs():
         importlib.reload(llm)
 
 
+@pytest.mark.skip(reason="Ollama functionality removed from services/llm.py - use LLMAdapter instead")
 def test_provider_order_includes_ollama():
     """Test that ollama is included in default provider order"""
     import os
