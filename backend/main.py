@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
 
+# Import the new Gemini router
 from .routers import contracts, issues, coverage, redlines, gemini
 # from .routers import ocr_example  # optional OCR example
 # from .routers import llm_test  # optional

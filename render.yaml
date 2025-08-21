@@ -7,13 +7,10 @@ services:
     runtime: python
     buildCommand: |
       pip install --upgrade pip
-      pip install -r src/backend/requirements.txt
-    startCommand: |
-      export PYTHONPATH=$PYTHONPATH:$PWD/src
-      gunicorn -k uvicorn.workers.UvicornWorker backend.main:app --bind 0.0.0.0:$PORT --workers 4
+      pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: GEMINI_API_KEY
         sync: false
       - key: BACKEND_URL
         value: https://blackletter-backend.onrender.com/review
-status: render services
