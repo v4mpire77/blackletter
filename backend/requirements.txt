@@ -1,12 +1,22 @@
+# Core API
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
-python-multipart==0.0.9
 pydantic==2.8.2
+python-multipart==0.0.9
+python-dotenv==1.0.1
 email-validator==2.2.0
 orjson==3.11.2
-python-dotenv==1.0.1
+
+# Parsing / PDFs (non‑OCR)
 pypdf==4.3.1
-pdfplumber==0.11.7
-pytesseract==0.3.10
-pillow==10.0.0
+
+# Resilience / retries
+tenacity==9.0.0
+
+# HTTP clients
+httpx==0.28.1
 requests==2.31.0
+
+# LLM clients
+google-generativeai==0.7.2
+openai>=1.0.0
