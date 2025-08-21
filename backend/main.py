@@ -2,6 +2,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+import os
 
 from .routers import contracts, issues, coverage, redlines
 # from .routers import llm_test  # optional
@@ -20,10 +22,14 @@ app.add_middleware(
 def health():
     return {"status": "ok"}
 
+# Mount the exported Next.js site at /app if it exists
+if os.path.isdir("frontend/out"):
+    app.mount("/app", StaticFiles(directory="frontend/out", html=True), name="app")
+
+# Send root to the UI (docs still available at /docs)
 @app.get("/")
 def root():
-    # Prefer simple JSON; change to RedirectResponse("/docs") if you want
-    return {"service":"blackletter-backend","status":"ok","docs":"/docs"}
+    return RedirectResponse(url="/app")
 
 app.include_router(contracts.router, prefix="/api", tags=["contracts"])
 app.include_router(issues.router,    prefix="/api", tags=["issues"])
