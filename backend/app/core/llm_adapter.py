@@ -1,198 +1,87 @@
+# Gemini-only LLM adapter
+# Removes OpenAI/Ollama. Reads GEMINI_API_KEY and optional GEMINI_MODEL.
+
+from __future__ import annotations
 import os
-import json
-import asyncio
-import re
-from typing import Optional, Any
+from typing import Iterable, List, Optional, Dict, Any
 
-try:
-    import openai
-except Exception:
-    openai = None
+import google.generativeai as genai
 
-try:
-    import ollama
-except Exception:
-    ollama = None
 
-import httpx
+DEFAULT_GEN_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+DEFAULT_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "text-embedding-004")
 
 
 class LLMAdapter:
-    """Async adapter supporting OpenAI and Ollama (HTTP fallback).
+    """
+    Thin wrapper around Google Gemini for text generation and embeddings.
 
-    It prefers OpenAI when LLM_PROVIDER=openai and OPENAI_API_KEY is set. For Ollama it will
-    try the python package then fall back to the HTTP API at OLLAMA_BASE_URL.
+    Usage:
+        llm = LLMAdapter()  # requires GEMINI_API_KEY in env
+        text = llm.generate("Summarise this clause ...")
+        vecs = llm.embed_texts(["hello", "world"])
     """
 
-    def __init__(self):
-        self.provider = os.getenv("LLM_PROVIDER", "ollama")
-        self.model = os.getenv(
-            "DEFAULT_LLM", "llama3.1:8b" if self.provider == "ollama" else "gpt-4"
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        gen_model: Optional[str] = None,
+        embed_model: Optional[str] = None,
+        temperature: float = 0.2,
+        max_output_tokens: int = 2048,
+    ) -> None:
+        key = api_key or os.getenv("GEMINI_API_KEY")
+        if not key:
+            raise RuntimeError("GEMINI_API_KEY is missing. Set it in your environment.")
+
+        genai.configure(api_key=key)
+        self.gen_model = gen_model or DEFAULT_GEN_MODEL
+        self.embed_model = embed_model or DEFAULT_EMBED_MODEL
+        self.temperature = temperature
+        self.max_output_tokens = max_output_tokens
+
+    # --------- Health / readiness ---------
+    def ready(self) -> bool:
+        # Basic check: key configured and models are non-empty
+        return bool(self.gen_model and self.embed_model)
+
+    def health(self) -> Dict[str, Any]:
+        return {
+            "provider": "gemini",
+            "ready": self.ready(),
+            "gen_model": self.gen_model,
+            "embed_model": self.embed_model,
+        }
+
+    # --------- Text generation ---------
+    def generate(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        temperature: Optional=float,
+        max_output_tokens: Optional[int] = None,
+    ) -> str:
+        """
+        Generate text from Gemini. If `system` is provided, it is used as a system instruction.
+        """
+        model = genai.GenerativeModel(
+            model_name=self.gen_model,
+            system_instruction=system if system else None,
         )
-        self.ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self.openai_key = os.getenv("OPENAI_API_KEY")
-
-        # Check whether an Ollama server is reachable
-        self.ollama_reachable = self._ollama_ready()
-
-        if self.provider == "openai" and openai is not None and self.openai_key:
-            openai.api_key = self.openai_key
-
-        # Record a clear error if neither backend is available
-        self.init_error: Optional[str] = None
-        if not self.openai_key and not self.ollama_reachable:
-            self.init_error = (
-                f"No LLM backend configured. Set OPENAI_API_KEY or start an Ollama server at {self.ollama_base}."
-            )
-
-    def _ollama_ready(self) -> bool:
-        """Check if an Ollama server responds to a simple request."""
-        try:
-            url = self.ollama_base.rstrip("/") + "/api/tags"
-            httpx.get(url, timeout=2)
-            return True
-        except Exception:
-            return False
-
-    async def _call_openai(self, messages: list) -> str:
-        if openai is None:
-            raise RuntimeError("openai package not available")
-        # run in thread to avoid blocking event loop
-        def sync_call():
-            # Support both new OpenAI and older ChatCompletion shapes
-            resp = None
-            create = getattr(openai, "ChatCompletion", None)
-            if create is not None:
-                resp = create.create(model=self.model, messages=messages)
-                # Try different access patterns
-                if hasattr(resp, "choices"):
-                    choice = resp.choices[0]
-                    if hasattr(choice, "message"):
-                        return getattr(choice.message, "content", "")
-                    return getattr(choice, "text", "")
-
-            # Fallback to chat completions via client method
-            try:
-                client_chat = getattr(openai, "chat", None)
-                if client_chat is not None and hasattr(client_chat, "completions"):
-                    resp = client_chat.completions.create(model=self.model, messages=messages)
-                    if resp and hasattr(resp, "choices"):
-                        return getattr(resp.choices[0].message, "content", "")
-            except Exception:
-                pass
-
-            # Last resort: stringify whatever we have
-            return str(resp or "")
-
-        return await asyncio.to_thread(sync_call)
-
-    async def _call_ollama(self, messages: list) -> str:
-        # Prefer python client if available
-        if ollama is not None:
-            def sync_call():
-                # use getattr to avoid static lint errors
-                chat_fn = getattr(ollama, "chat", None)
-                if chat_fn is not None:
-                    res = chat_fn(model=self.model, messages=messages)
-                    # handle different shapes
-                    if isinstance(res, dict) and "message" in res:
-                        return res["message"].get("content", "")
-                    # try common attributes
-                    if hasattr(res, "text"):
-                        return getattr(res, "text")
-                    return str(res)
-
-                # try alternate client shape (guarded)
-                chat_client_cls = getattr(ollama, "ChatClient", None)
-                if callable(chat_client_cls):
-                    try:
-                        client = chat_client_cls()
-                        if hasattr(client, "chat"):
-                            res = getattr(client, "chat")(model=self.model, messages=messages)
-                            return str(res)
-                    except Exception:
-                        pass
-
-                return ""
-
-            return await asyncio.to_thread(sync_call)
-
-        # Fallback to HTTP
-        url = self.ollama_base.rstrip("/") + "/api/chat"
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                url, json={"model": self.model, "messages": messages}, timeout=30
-            )
-        resp.raise_for_status()
-        body = resp.json()
-        if isinstance(body, dict):
-            if "response" in body:
-                return body["response"]
-            if "choices" in body and body["choices"]:
-                choice = body["choices"][0]
-                if isinstance(choice, dict):
-                    return choice.get("message", {}).get("content", "") or choice.get("content", "")
-        return json.dumps(body)
-
-    async def analyze_contract(self, text: str) -> Any:
-        """Analyze contract text and return either parsed JSON or raw text."""
-        prompt = (
-            "Analyze this contract text and provide:\n"
-            "1. A brief summary (2-3 sentences)\n"
-            "2. Key risks or concerns\n"
-            "3. Important dates or deadlines\n\n"
-            "Format as JSON with keys: summary (string), risks (list), dates (list).\n"
+        resp = model.generate_content(
+            prompt,
+            generation_config={
+                "temperature": self.temperature if temperature is None else float(temperature),
+                "max_output_tokens": int(max_output_tokens or self.max_output_tokens),
+            },
         )
+        # Gemini SDK returns candidates; `.text` is a convenience property.
+        return (resp.text or "").strip()
 
-        system = "You are a legal contract analysis assistant. Be concise and focus on material risks."
-        user = f"{prompt}\nText: {text}"
-        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    # --------- Embeddings ---------
+    def embed_text(self, text: str) -> List[float]:
+        r = genai.embed_content(model=self.embed_model, content=text)
+        return r["embedding"]["values"]
 
-        if self.init_error:
-            # Basic heuristic fallback so the system still returns something
-            sentences = re.split(r"(?<=[.!?])\s+", text.strip())
-            summary = " ".join(sentences[:2]).strip()
-            risk_sentences = [
-                s.strip()
-                for s in sentences[2:]
-                if re.search(r"\b(shall|must|obligation|liability|indemnify|terminate)\b", s, re.I)
-            ]
-            return {
-                "summary": summary,
-                "risks": risk_sentences[:5],
-                "dates": [],
-                "error": self.init_error,
-            }
-
-        # Prefer provider, but fall back gracefully if unavailable
-        if self.provider == "openai":
-            if self.openai_key and openai is not None:
-                resp = await self._call_openai(messages)
-            elif self.ollama_reachable:
-                resp = await self._call_ollama(messages)
-            else:
-                return {
-                    "summary": "",
-                    "risks": [],
-                    "dates": [],
-                    "error": f"OPENAI_API_KEY is missing and no Ollama server reachable at {self.ollama_base}.",
-                }
-        else:
-            if self.ollama_reachable:
-                resp = await self._call_ollama(messages)
-            elif self.openai_key and openai is not None:
-                resp = await self._call_openai(messages)
-            else:
-                return {
-                    "summary": "",
-                    "risks": [],
-                    "dates": [],
-                    "error": self.init_error,
-                }
-
-        # Attempt to parse JSON
-        try:
-            return json.loads(resp)
-        except Exception:
-            return resp
-
+    def embed_texts(self, texts: Iterable[str]) -> List[List[float]]:
+        return [self.embed_text(t) for t in texts]

@@ -1,184 +1,141 @@
-from fastapi import APIRouter, UploadFile, HTTPException
+from __future__ import annotations
+import io, re, datetime as dt
+from typing import List, Optional
+
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from pypdf import PdfReader
-from io import BytesIO
-import json
-import re
-import json
-import asyncio
-import uuid
-from typing import Dict
-from ..app.core.llm_adapter import LLMAdapter
-from ..models.schemas import ReviewResult
+
+from ..models.schemas import ReviewResult, Issue
+from ..services.llm import generate_text
 
 router = APIRouter()
 
-# LLM Prompt templates (from COPILOT_INSTRUCTIONS)
-SYSTEM_PROMPT = (
-    "You are a UK legal assistant helping with quick, non-binding contract triage. Be concise."
-)
-USER_PROMPT = (
-    "Return ONLY valid JSON (no commentary, no code fences, no explanation).\n"
-    "Output a single JSON object with keys: summary (string), risks (array of strings).\n"
-    "If information is missing, still return an object but note missing sections as empty or an explanatory string.\n"
-    "Text: {text}"
-)
+MAX_CHARS = 6000
 
-# Adapter (async interface in app.core.llm_adapter)
-llm = LLMAdapter()
+def _pdf_to_text(file_bytes: bytes) -> str:
+    try:
+        reader = PdfReader(io.BytesIO(file_bytes))
+        pages = []
+        for p in reader.pages:
+            pages.append(p.extract_text() or "")
+        return "\n".join(pages)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"PDF parse failed: {e}")
 
+def _heuristics(text: str, doc_name: str, doc_id: str) -> List[Issue]:
+    issues: List[Issue] = []
+    now = dt.datetime.utcnow().isoformat() + "Z"
+
+    def add_issue(clause_path, type_, citation, severity, snippet, recommendation, conf):
+        issues.append(Issue(
+            id=f"ISS-{abs(hash(clause_path+citation))%100000}",
+            docId=doc_id, docName=doc_name, clausePath=clause_path,
+            type=type_, citation=citation, severity=severity,
+            confidence=conf, status="Open", snippet=snippet[:400],
+            recommendation=recommendation, createdAt=now
+        ))
+
+    lowtxt = text.lower()
+
+    # International transfers / SCC/IDTA
+    if re.search(r"transfer(s)?\s+outside\s+(the\s+)?(uk|europe|eea)", lowtxt):
+        add_issue(
+            "5.2 → Data Protection → International Transfers",
+            "GDPR",
+            "UK GDPR Arts. 44–49; DPA 2018 Part 2",
+            "High",
+            "Clause indicates transfers outside the UK/EEA without clear safeguards.",
+            "Add safeguards (UK IDTA/Addendum or SCCs) and a documented Transfer Risk Assessment.",
+            0.85
+        )
+
+    # Subprocessors authorisation
+    if re.search(r"sub[-\s]?processor|subprocessor", lowtxt) and re.search(r"without\s+(prior|written)\s+authori[sz]ation", lowtxt):
+        add_issue(
+            "5.5 → Data Protection → Subprocessors",
+            "GDPR",
+            "UK GDPR Art. 28(2)-(4)",
+            "Medium",
+            "Subprocessors permitted without prior written authorisation.",
+            "Use prior written authorisation or, at minimum, publish list + notice + right to object.",
+            0.8
+        )
+
+    # Breach notification timing vagueness
+    if re.search(r"personal\s+data\s+breach|security\s+incident", lowtxt) and re.search(r"without\s+undue\s+delay|reasonable\s+time", lowtxt):
+        add_issue(
+            "9.2 → Security → Breach Notification",
+            "GDPR",
+            "UK GDPR Arts. 33–34",
+            "Medium",
+            "Breach notification timing is vague.",
+            "Specify: 'within 24 hours of becoming aware' for processors; include required details (Art. 33(3)).",
+            0.78
+        )
+
+    # Liability blanket exclusions
+    if re.search(r"exclude\s+all\s+liability|no\s+liability\s+for\s+any", lowtxt):
+        add_issue(
+            "2.3 → Liability → Carve-outs",
+            "Case Law",
+            "Barclays v Various Claimants [2020] UKSC 13; CRA 2015 context",
+            "Low",
+            "Overbroad liability exclusions may be unenforceable.",
+            "Add carve‑outs for statutory duties, fraud, wilful misconduct, and non‑excludable liabilities.",
+            0.7
+        )
+
+    return issues
 
 @router.post("/review", response_model=ReviewResult)
-async def review_contract(file: UploadFile):
-    # Validate file type
-    if file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are accepted")
+async def review_contract(
+    file: UploadFile = File(...),
+    doc_type: str = Form("Lease"),
+    jurisdiction: str = Form("UK"),
+    doc_name: str = Form("Uploaded Contract"),
+):
+    if file.content_type not in ("application/pdf", "pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    raw = await file.read()
+    text = _pdf_to_text(raw)
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="No text extracted from PDF")
+    text = text[:MAX_CHARS]
 
-    try:
-        # Read file content
-        content = await file.read()
-        if len(content) > 10 * 1024 * 1024:  # 10MB
-            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    system = "You are a UK legal compliance assistant. Be precise and concise. Cite UK GDPR/DPA when relevant."
+    prompt = (
+        f"Document type: {doc_type}\nJurisdiction: {jurisdiction}\n"
+        f"Summarise key compliance risks in 4–6 bullet points based on the following excerpt:\n\n{text}"
+    )
+    summary = generate_text(prompt, system=system, max_tokens=500)
 
-        # Extract text from PDF in a background thread
-        def _extract(data: bytes) -> str:
-            pdf = PdfReader(BytesIO(data))
-            text_parts = []
-            for page in pdf.pages:
-                t = page.extract_text() or ""
-                text_parts.append(t)
-            return "\n\n".join(text_parts).strip()
+    issues = _heuristics(text, doc_name, doc_id="DOC-UPLOAD")
+    return ReviewResult(
+        summary=summary,
+        risks=[i.citation for i in issues],
+        redlines={},
+        next_actions=["Review suggested redlines; add firm playbook for scoring."],
+        issues=issues,
+    )
 
-        text = await asyncio.to_thread(_extract, content)
+# Text-based analyze endpoint (lets the UI call without file upload)
+from pydantic import BaseModel
+class AnalyzeRequest(BaseModel):
+    text: str
+    docName: str = "Pasted Text"
+    jurisdiction: str = "UK"
+    docType: str = "Contract"
 
-        if not text:
-            raise HTTPException(status_code=400, detail="No extractable text found in PDF")
-
-        # Truncate text to safe length for LLM
-        truncated = text[:6000] + ("..." if len(text) > 6000 else "")
-
-        # Call the adapter's analyze_contract (async)
-        resp = await llm.analyze_contract(truncated)
-
-        # Normalise response to text or dict
-        if isinstance(resp, dict):
-            parsed = resp
-            summary = parsed.get("summary") or parsed.get("summary_text") or ""
-            risks = parsed.get("risks") or parsed.get("issues") or []
-            if isinstance(risks, str):
-                risks = [risks]
-        else:
-            resp_text = str(resp)
-            # 1) Try direct JSON
-            parsed = None
-            try:
-                parsed = json.loads(resp_text)
-            except Exception:
-                parsed = None
-
-            # 2) If not, try to extract JSON inside triple-backtick fences ```{...}```
-            if parsed is None:
-                m = re.search(r'```\s*({[\s\S]*?})\s*```', resp_text)
-                if m:
-                    try:
-                        parsed = json.loads(m.group(1))
-                    except Exception:
-                        parsed = None
-
-            # 3) If still not, try any {...} blocks (prefer the longest candidate)
-            if parsed is None:
-                candidates = re.findall(r'({[\s\S]*})', resp_text)
-                candidates.sort(key=len, reverse=True)
-                for cand in candidates:
-                    try:
-                        parsed = json.loads(cand)
-                        break
-                    except Exception:
-                        # Try unescaping common backslash-escaped sequences
-                        try:
-                            unescaped = bytes(cand, "utf-8").decode("unicode_escape")
-                            parsed = json.loads(unescaped)
-                            break
-                        except Exception:
-                            # Try trimming surrounding quotes if present
-                            try:
-                                trimmed = cand.strip('"\'')
-                                parsed = json.loads(trimmed)
-                                break
-                            except Exception:
-                                parsed = None
-
-            # 4) Final fallback: naive human-readable parsing
-            if parsed is not None:
-                summary = parsed.get("summary") or parsed.get("summary_text") or ""
-                risks = parsed.get("risks") or parsed.get("issues") or []
-                if isinstance(risks, str):
-                    risks = [risks]
-                # Coerce risk items to strings (handle dicts returned by some LLMs)
-                coerced = []
-                for r in risks:
-                    if isinstance(r, str):
-                        coerced.append(r)
-                    elif isinstance(r, dict):
-                        text = r.get("text") or r.get("description") or r.get("value")
-                        if isinstance(text, str) and text:
-                            coerced.append(text)
-                        else:
-                            try:
-                                coerced.append(json.dumps(r))
-                            except Exception:
-                                coerced.append(str(r))
-                    else:
-                        coerced.append(str(r))
-                risks = coerced
-            else:
-                # Fallback: naive split
-                parts = [p.strip() for p in resp_text.split("\n\n") if p.strip()]
-                summary = parts[0] if parts else ""
-                risks = []
-                for p in parts[1:]:
-                    for line in p.splitlines():
-                        line = line.strip()
-                        if not line:
-                            continue
-                        if line.startswith("-") or line.startswith("*"):
-                            risks.append(line.lstrip("-* "))
-                        else:
-                            risks.append(line)
-
-        return ReviewResult(summary=summary or "", risks=risks)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Processing failed: {e}")
-
-
-# In-memory storage for uploaded contracts
-contracts_store: Dict[str, ReviewResult] = {}
-
-
-@router.post("/contracts")
-async def create_contract(file: UploadFile):
-    """Upload a contract and run checks."""
-    result = await review_contract(file)
-    contract_id = str(uuid.uuid4())
-    contracts_store[contract_id] = result
-    return {"id": contract_id}
-
-
-@router.get("/contracts/{contract_id}/findings", response_model=ReviewResult)
-async def get_contract_findings(contract_id: str):
-    result = contracts_store.get(contract_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    return result
-
-
-@router.get("/contracts/{contract_id}/report")
-async def get_contract_report(contract_id: str):
-    result = contracts_store.get(contract_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    lines = ["# Contract Report", "", "## Summary", result.summary, "", "## Key Risks"]
-    lines.extend(f"- {r}" for r in result.risks)
-    return {"report": "\n".join(lines)}
+@router.post("/analyze", response_model=ReviewResult)
+def analyze_text(req: AnalyzeRequest):
+    text = (req.text or "")[:MAX_CHARS]
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Empty text")
+    system = "You are a UK legal compliance assistant. Be precise and concise."
+    summary = generate_text(
+        f"Summarise key compliance risks (4–6 bullets) for a {req.docType} in {req.jurisdiction}:\n\n{text}",
+        system=system,
+        max_tokens=500,
+    )
+    issues = _heuristics(text, req.docName, doc_id="DOC-TEXT")
+    return ReviewResult(summary=summary, issues=issues)
