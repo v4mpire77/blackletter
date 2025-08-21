@@ -1,7 +1,7 @@
 """Test Gemini client import and runtime functionality."""
 import pytest
 from unittest.mock import Mock, patch
-from services.llm import GeminiClient, LLMClient
+from ..services.llm import GeminiClient, LLMClient
 
 
 def test_gemini_client_import():
