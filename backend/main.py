@@ -1,30 +1,32 @@
+from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from .routers import contracts, dashboard
 
-app = FastAPI(title="Blackletter Systems API")
+from .routers import contracts, issues, coverage, redlines
+# from .routers import llm_test  # optional
 
-# Configure CORS
+app = FastAPI(title="Blackletter Backend")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # tighten to your frontend origin later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount routers
-app.include_router(contracts.router, prefix="/api")
-app.include_router(dashboard.router, prefix="/api")
-
-# Root route redirects to API docs
-@app.get("/")
-async def root():
-    """Redirect to interactive API documentation."""
-    return RedirectResponse(url="/docs")
-
-# Health check
 @app.get("/health")
-async def health_check():
+def health():
     return {"status": "ok"}
+
+@app.get("/")
+def root():
+    # Prefer simple JSON; change to RedirectResponse("/docs") if you want
+    return {"service":"blackletter-backend","status":"ok","docs":"/docs"}
+
+app.include_router(contracts.router, prefix="/api", tags=["contracts"])
+app.include_router(issues.router,    prefix="/api", tags=["issues"])
+app.include_router(coverage.router,  prefix="/api", tags=["coverage"])
+app.include_router(redlines.router,  prefix="/api", tags=["redlines"])
+# app.include_router(llm_test.router,  prefix="/api", tags=["llm"])

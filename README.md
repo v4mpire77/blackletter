@@ -10,9 +10,10 @@ Simple, fast contract review using AI. Upload → Extract → Summarise → Show
 ## Option A — One-click "phone-ready" deploy
 
 1. Go to [Render](https://render.com) and create a new **Web Service** connected to this GitHub repository.
-2. Set the service root to `backend` and configure one of the following:
-   - `LLM_PROVIDER=openai` and `OPENAI_API_KEY=<your OpenAI key>`
-   - or `LLM_PROVIDER=gemini` and `GEMINI_API_KEY=<your Google Gemini key>`
+2. Set the service root to `backend` and set environment variables:
+   - `GEMINI_API_KEY=<your Google Gemini key>`
+   - `OPENAI_API_KEY=<your OpenAI key>` (optional)
+   - `PROVIDER_ORDER=gemini,openai`
 3. Build command: `pip install -r requirements.txt`
 4. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 5. Once deployed, note the public URL (e.g., `https://blackletter-api.onrender.com`) for your phone or frontend.
@@ -32,18 +33,12 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-To use OpenAI instead of Ollama:
+Set your LLM API keys:
 
 ```powershell
-setx LLM_PROVIDER "openai"
-setx OPENAI_API_KEY "<YOUR_KEY>"
-```
-
-To use Gemini instead of Ollama:
-
-```powershell
-setx LLM_PROVIDER "gemini"
-setx GEMINI_API_KEY "<YOUR_KEY>"
+setx GEMINI_API_KEY "<YOUR_GEMINI_KEY>"
+setx OPENAI_API_KEY "<YOUR_OPENAI_KEY>"  # optional
+setx PROVIDER_ORDER "gemini,openai"
 ```
 
 ### Frontend Setup
