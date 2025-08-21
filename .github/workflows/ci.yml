@@ -19,12 +19,14 @@ jobs:
 
       - name: Install Rust
         run: |
-          export CARGO_HOME=$HOME/.cargo
-          export RUSTUP_HOME=$HOME/.rustup
+          echo "CARGO_HOME=$HOME/.cargo" >> $GITHUB_ENV
+          echo "RUSTUP_HOME=$HOME/.rustup" >> $GITHUB_ENV
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source $HOME/.cargo/env
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           rustc --version
 
+
+      # Other steps can be added here
       - name: Upgrade pip
         run: pip install --upgrade pip
 
@@ -32,3 +34,4 @@ jobs:
         run: |
           pip install maturin
           pip install -r backend/requirements.txt
+main

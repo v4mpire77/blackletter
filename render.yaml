@@ -6,12 +6,39 @@ services:
     plan: free
     pythonVersion: 3.11.9
     buildCommand: |
+ codex/fix-rust-toolchain-writable-paths-9hjp1m
+        # Define writable paths for Cargo and Rustup
+        export CARGO_HOME="$HOME/.cargo"
+        export RUSTUP_HOME="$HOME/.rustup"
+        mkdir -p "$CARGO_HOME" "$RUSTUP_HOME"
+
+        # Install Rust toolchain
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        export PATH="$CARGO_HOME/bin:$PATH"
+        rustc --version
+
+        # Install Python deps
+        pip install --upgrade pip
+        pip install maturin
+        pip install -r backend/requirements.txt
+
+        # Install Node + build frontend
+        cd frontend
+        npm install
+        npm run build
+        cd ..
+
       python -m pip install --upgrade pip setuptools wheel \
       && python -m pip install -r backend/requirements.txt \
       && cd frontend && npm ci \
       && NEXT_PUBLIC_API_URL=/ npm run export \
       && cd ..
+main
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: NODE_VERSION
         value: 18.18.0
+      - key: CARGO_HOME
+        value: /opt/render/home/.cargo
+      - key: RUSTUP_HOME
+        value: /opt/render/home/.rustup
