@@ -5,7 +5,7 @@ This directory contains a comprehensive test script for validating the Gemini AP
 ## Files Created
 
 ### `llm_service.py`
-A unified LLM service wrapper that provides a consistent interface for contract analysis across different LLM providers (Gemini, OpenAI, Ollama).
+A unified LLM service wrapper that provides a consistent interface for contract analysis across different LLM providers (Gemini, Ollama).
 
 ### `test_gemini.py`
 The main test script that validates the Gemini API integration and contract analysis functionality.
@@ -39,15 +39,6 @@ export LLM_PROVIDER="gemini"
 python test_gemini.py
 ```
 
-### Testing with OpenAI
-
-```bash
-cd backend
-export OPENAI_API_KEY="your-openai-api-key"
-export LLM_PROVIDER="openai"
-python test_gemini.py
-```
-
 ## Expected Output
 
 ### With Gemini API Key Configured
@@ -57,7 +48,6 @@ python test_gemini.py
 📊 Provider Details:
    Model: gemini-2.0-flash
    Gemini configured: True
-   OpenAI configured: False
    Ollama available: False
 🔄 Analyzing sample contract...
 📋 Analysis Results:
@@ -77,7 +67,6 @@ Next Steps: Not specified
 📊 Provider Details:
    Model: gemini-2.0-flash
    Gemini configured: False
-   OpenAI configured: False
    Ollama available: False
 ⚠️  Warning: GEMINI_API_KEY is missing.
 🔄 Analyzing sample contract...
@@ -93,10 +82,8 @@ Next Steps: Not specified
 ## Environment Variables
 
 - `GEMINI_API_KEY`: Your Gemini API key
-- `OPENAI_API_KEY`: Your OpenAI API key (optional fallback)
-- `LLM_PROVIDER`: Preferred provider (`gemini`, `openai`, or `ollama`)
+- `LLM_PROVIDER`: Preferred provider (`gemini` or `ollama`)
 - `GEMINI_MODEL`: Gemini model to use (default: `gemini-2.0-flash`)
-- `OPENAI_MODEL`: OpenAI model to use (default: `gpt-4o-mini`)
 - `OLLAMA_BASE_URL`: Ollama server URL (default: `http://localhost:11434`)
 
 ## Troubleshooting

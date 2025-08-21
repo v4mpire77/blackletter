@@ -8,9 +8,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 # --- Gemini ---
 import google.generativeai as genai
-# --- OpenAI ---
-from openai import OpenAI
-from openai.types.chat import ChatCompletion
 # --- Ollama ---
 import requests
 
@@ -20,11 +17,10 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 @dataclass
 class ModelPrefs:
     gemini: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-    openai: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     ollama: str = os.getenv("OLLAMA_MODEL", "llama3.1")
 
 def _provider_order() -> List[str]:
-    order = os.getenv("PROVIDER_ORDER", "gemini,openai,ollama")
+    order = os.getenv("PROVIDER_ORDER", "gemini,ollama")
     return [p.strip().lower() for p in order.split(",") if p.strip()]
 
 class GeminiClient:
@@ -39,27 +35,6 @@ class GeminiClient:
         pre = f"System: {system}\n\n" if system else ""
         resp = self.model.generate_content(pre + prompt)
         return getattr(resp, "text", "").strip()
-
-class OpenAIClient:
-    def __init__(self, model_name: str):
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY missing")
-        self.client = OpenAI(api_key=api_key)
-        self.model = model_name
-
-    def generate(self, prompt: str, system: Optional[str] = None, max_tokens: int = 800) -> str:
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
-        r: ChatCompletion = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=0.2,
-            max_tokens=max_tokens,
-        )
-        return (r.choices[0].message.content or "").strip()
 
 class OllamaClient:
     def __init__(self, model_name: str):
@@ -94,8 +69,6 @@ class TransientLLMError(Exception):
 def _client_for(provider: str, models: ModelPrefs):
     if provider == "gemini":
         return GeminiClient(models.gemini)
-    if provider == "openai":
-        return OpenAIClient(models.openai)
     if provider == "ollama":
         return OllamaClient(models.ollama)
     raise ValueError(f"Unknown provider: {provider}")

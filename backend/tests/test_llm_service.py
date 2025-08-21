@@ -29,13 +29,12 @@ def test_get_provider_info():
     info = service.get_provider_info()
     
     required_keys = ["provider", "model", "gemini_configured", 
-                    "openai_configured", "ollama_available", "init_error"]
+                    "ollama_available", "init_error"]
     
     for key in required_keys:
         assert key in info
     
     assert isinstance(info["gemini_configured"], bool)
-    assert isinstance(info["openai_configured"], bool)
     assert isinstance(info["ollama_available"], bool)
 
 
