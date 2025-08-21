@@ -9,7 +9,7 @@ jobs:
   eval:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run evaluation
         shell: pwsh
         run: ./evaluate.ps1 -Fixtures "./fixtures" -Rules "./rules" -Out "./eval/results.json"

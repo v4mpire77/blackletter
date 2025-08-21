@@ -29,19 +29,17 @@ def judge_faithfulness(question, answer, context):
         f"Answer: {answer}\n"
         "Is the answer faithful to the context? Reply yes or no."
     )
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     if api_key:
         try:
-            import openai
+            import google.generativeai as genai
 
-            openai.api_key = api_key
-            resp = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}],
-            )
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            response = model.generate_content(prompt)
             return (
                 1.0
-                if "yes" in resp["choices"][0]["message"]["content"].lower()
+                if "yes" in response.text.lower()
                 else 0.0
             )
         except Exception:
