@@ -1,0 +1,13 @@
+# Suggested labels
+- type:epic
+- type:feature
+- type:bug
+- ops
+- assurance
+- hitl
+- sla:10d
+- security
+- billing
+- integrations
+- partner
+- pilot

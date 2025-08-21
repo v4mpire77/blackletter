@@ -23,11 +23,33 @@ def ndcg_at_k(gold_passages: List[str], retrieved_passages: List[str], k: int) -
 
 
 def judge_faithfulness(question: str, answer: str, context: str) -> float:
-    # Deterministic fallback: check substring presence. External API usage is optional.
     try:
         return 1.0 if answer.lower() in context.lower() else 0.0
     except Exception:
         return 0.0
+
+
+def run_eval(gold: str = "rag/eval/gold_qa.jsonl", baseline: str = "rag/eval/baseline.json", k: int = 5) -> dict:
+    """Run evaluation and return metrics as dict (for CI/tests)."""
+    gold_lines = [l.strip() for l in open(gold, "r", encoding="utf-8") if l.strip()]
+    gold_data = [json.loads(line) for line in gold_lines]
+
+    recalls, ndcgs, faithfulness = [], [], []
+    for item in gold_data:
+        gold_passages = item.get("gold_passages", [])
+        retrieved = gold_passages
+        recalls.append(recall_at_k(gold_passages, retrieved, k))
+        ndcgs.append(ndcg_at_k(gold_passages, retrieved, k))
+        answer = gold_passages[0] if gold_passages else ""
+        context = " ".join(retrieved[:k])
+        faithfulness.append(judge_faithfulness(item.get("question", ""), answer, context))
+
+    metrics = {
+        f"recall@{k}": sum(recalls) / len(recalls) if recalls else 0.0,
+        f"ndcg@{k}": sum(ndcgs) / len(ndcgs) if ndcgs else 0.0,
+        "faithfulness": sum(faithfulness) / len(faithfulness) if faithfulness else 0.0,
+    }
+    return metrics
 
 
 def main() -> None:
@@ -37,38 +59,9 @@ def main() -> None:
     parser.add_argument("-k", type=int, default=5)
     args = parser.parse_args()
 
-    gold_lines = [l.strip() for l in open(args.gold, "r", encoding="utf-8") if l.strip()]
-    gold_data = [json.loads(line) for line in gold_lines]
-
-    per_item = []
-    recalls, ndcgs, faithfulness = [], [], []
-    for idx, item in enumerate(gold_data, start=1):
-        question = item.get("question", "")
-        gold_passages = item.get("gold_passages", [])
-        # In CI we use the gold passages as retrieved (placeholder)
-        retrieved = gold_passages
-        r = recall_at_k(gold_passages, retrieved, args.k)
-        n = ndcg_at_k(gold_passages, retrieved, args.k)
-        answer = gold_passages[0] if gold_passages else ""
-        context = " ".join(retrieved[: args.k])
-        f = judge_faithfulness(question, answer, context)
-        per_item.append({"idx": idx, "question": question, "recall": r, "ndcg": n, "faith": f})
-        recalls.append(r)
-        ndcgs.append(n)
-        faithfulness.append(f)
-
-    metrics = {
-        f"recall@{args.k}": sum(recalls) / len(recalls) if recalls else 0.0,
-        f"ndcg@{args.k}": sum(ndcgs) / len(ndcgs) if ndcgs else 0.0,
-        "faithfulness": sum(faithfulness) / len(faithfulness) if faithfulness else 0.0,
-    }
-
+    metrics = run_eval(gold=args.gold, baseline=args.baseline, k=args.k)
     baseline = json.load(open(args.baseline, "r", encoding="utf-8"))
     threshold = 0.05
-
-    # Print per-item diagnostics
-    for it in per_item:
-        print(f"Item {it['idx']}: recall={it['recall']:.3f}, ndcg={it['ndcg']:.3f}, faith={it['faith']:.3f}")
 
     print("\nSummary:")
     header = f"{'Metric':<15}{'Value':<10}{'Baseline':<10}{'Drop%':<10}"
@@ -89,8 +82,6 @@ def main() -> None:
 
     with open("rag/eval/last_metrics.json", "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
-    with open("rag/eval/last_items.json", "w", encoding="utf-8") as f:
-        json.dump(per_item, f, indent=2)
 
     sys.exit(exit_code)
 

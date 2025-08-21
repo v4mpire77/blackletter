@@ -1,56 +1,49 @@
-from fastapi import APIRouter, UploadFile, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from pydantic import BaseModel
 from pypdf import PdfReader
 from io import BytesIO
-import openai
-from models.schemas import ReviewResult
 
-router = APIRouter()
+from app.core.llm_adapter import LLMAdapter
 
-# LLM Prompt templates
-SYSTEM_PROMPT = 'You are a UK legal assistant helping with quick, non-binding contract triage. Be concise.'
-USER_PROMPT = '''Summarise this contract for a non-lawyer. Then list the top 3–5 risks with short reasoning. 
-If text is incomplete, say so. Text: {text}'''
+router = APIRouter(prefix="/api", tags=["contracts"])
+
+
+class ReviewResult(BaseModel):
+    summary: str
+    risks: list[dict]
+
 
 @router.post("/review", response_model=ReviewResult)
-async def review_contract(file: UploadFile):
-    # Validate file type
-    if not file.content_type == "application/pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are accepted")
-    
+async def review_contract(file: UploadFile = File(...)) -> ReviewResult:
+    """
+    Accepts an uploaded contract (PDF or text).
+    Extracts text, passes it to the LLMAdapter for summarisation + risk flags.
+    Always returns a JSON ReviewResult with summary + risks.
+    """
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    text = ""
     try:
-        # Read file content
-        content = await file.read()
-        if len(content) > 10 * 1024 * 1024:  # 10MB
-            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-            
-        # Extract text from PDF
-        pdf = PdfReader(BytesIO(content))
-        text = ""
-        for page in pdf.pages:
-            page_text = page.extract_text() or ""
-            text += page_text + "\n"
-            
-        # Truncate text to ~6000 chars
-        text = text[:6000] + ("..." if len(text) > 6000 else "")
-        
-        # Call OpenAI for analysis
-        completion = openai.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": USER_PROMPT.format(text=text)}
-            ]
-        )
-        
-        # Parse response
-        response = completion.choices[0].message.content
-        
-        # Split into summary and risks
-        parts = response.split("\n\n")
-        summary = parts[0]
-        risks = [r.strip("- ") for r in parts[1:] if r.strip()]
-        
-        return ReviewResult(summary=summary, risks=risks)
-        
+        if file.filename and file.filename.lower().endswith(".pdf"):
+            # Try reading first ~10 pages for performance
+            reader = PdfReader(BytesIO(data))
+            for page in reader.pages[:10]:
+                text += page.extract_text() or ""
+        else:
+            # Treat as text input if not PDF
+            text = data.decode(errors="ignore")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Fallback: show first 1000 bytes as string
+        text = data[:1000].decode(errors="ignore")
+        if not text.strip():
+            raise HTTPException(status_code=500, detail=f"Failed to extract text: {e}")
+
+    if not text.strip():
+        text = "No extractable text found."
+
+    adapter = LLMAdapter()
+    result = adapter.summarize(text)
+
+    return ReviewResult(**result)
