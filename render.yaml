@@ -9,3 +9,13 @@ services:
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+  - type: web
+    name: blackletter-rag
+    region: oregon
+    plan: free
+    branch: main
+    runtime: python
+    root: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn rag.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
