@@ -1,5 +1,13 @@
 import asyncio
-from backend.app.core.llm_adapter import LLMAdapter
+
+if __package__ is None or __package__ == "":
+    import os
+    import sys
+
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    from backend.app.core.llm_adapter import LLMAdapter  # type: ignore  # pragma: no cover
+else:
+    from ..app.core.llm_adapter import LLMAdapter
 
 class DummyResponse:
     def __init__(self, data):
