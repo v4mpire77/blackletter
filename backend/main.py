@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 import os
 from dotenv import load_dotenv
 
-from routers import contracts, issues, coverage, redlines, gemini
+from .routers import contracts, issues, coverage, redlines, gemini
 # from .routers import ocr_example  # optional OCR example
 # from .routers import llm_test  # optional
 
