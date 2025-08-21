@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: blackletter-backend
+    region: oregon
+    plan: free
+    branch: main
+    runtime: python
+    root: backend
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
