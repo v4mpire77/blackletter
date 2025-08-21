@@ -5,7 +5,11 @@ from fastapi.testclient import TestClient
 from backend.main import app
 
 
-def test_review_endpoint_returns_results():
+def test_review_endpoint_returns_results(monkeypatch):
+    monkeypatch.setattr(
+        "backend.routers.contracts.ask_gemini",
+        lambda prompt: '{"summary": "ok", "risks": ["r1"]}',
+    )
     client = TestClient(app)
     pdf_path = Path("backend/tests/fixtures/uk_nda.pdf")
     with pdf_path.open("rb") as f:

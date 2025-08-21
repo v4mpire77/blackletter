@@ -7,3 +7,5 @@ python-multipart
 pypdf
 python-docx
 tiktoken
+httpx==0.26.0
+google-generativeai
