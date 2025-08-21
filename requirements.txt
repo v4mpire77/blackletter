@@ -1,6 +1,5 @@
 chromadb
-openai
-pydantic
+pydantic==2.8.2
 fastapi
 uvicorn
 python-multipart
