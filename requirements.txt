@@ -1,11 +1,11 @@
 chromadb
+fastapi
+google-generativeai
+httpx==0.26.0
 openai
 pydantic
-fastapi
-uvicorn
-python-multipart
 pypdf
 python-docx
+python-multipart
 tiktoken
-httpx==0.26.0
-google-generativeai
+uvicorn
