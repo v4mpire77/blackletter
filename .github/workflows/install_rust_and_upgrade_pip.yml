@@ -1,0 +1,28 @@
+name: Install Rust and Upgrade Pip
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  setup-environment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          echo "Rust installation completed. Version:"
+          rustc --version
+
+      - name: Upgrade Pip
+        run: |
+          python3 -m pip install --upgrade pip
+          echo "Pip upgrade completed. Version:"
+          python3 -m pip --version
