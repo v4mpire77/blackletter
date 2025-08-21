@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from pypdf import PdfReader
 from io import BytesIO
 
-from backend.app.core.llm_adapter import LLMAdapter
+from ..app.core.llm_adapter import LLMAdapter
 
 try:  # pragma: no cover - openai is optional but tests patch it
     import openai  # type: ignore
