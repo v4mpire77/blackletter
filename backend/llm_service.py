@@ -50,7 +50,6 @@ class LLMService:
             "provider": self.adapter.provider,
             "model": self.adapter.model,
             "gemini_configured": bool(self.adapter.gemini_key),
-            "openai_configured": bool(self.adapter.openai_key),
             "ollama_available": self.adapter.ollama_reachable,
             "init_error": self.adapter.init_error
         }

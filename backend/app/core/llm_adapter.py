@@ -5,11 +5,6 @@ import re
 from typing import Optional, Any
 
 try:
-    import openai
-except Exception:
-    openai = None
-
-try:
     import ollama
 except Exception:
     ollama = None
@@ -18,44 +13,35 @@ import httpx
 
 
 class LLMAdapter:
-    """Async adapter supporting OpenAI, Gemini, and Ollama (HTTP fallback).
+    """Async adapter supporting Gemini and Ollama (HTTP fallback).
 
-    It prefers OpenAI when ``LLM_PROVIDER=openai`` and ``OPENAI_API_KEY`` is set. For
-    Gemini, set ``LLM_PROVIDER=gemini`` with ``GEMINI_API_KEY``. For Ollama it will try
+    Set ``LLM_PROVIDER=gemini`` with ``GEMINI_API_KEY`` for Gemini. For Ollama it will try
     the python package then fall back to the HTTP API at ``OLLAMA_BASE_URL``.
     """
 
     def __init__(self):
-        self.provider = os.getenv("LLM_PROVIDER", "ollama")
+        self.provider = os.getenv("LLM_PROVIDER", "gemini")
         if self.provider == "gemini":
-            default_model = "gemini-2.0-flash"
-        elif self.provider == "openai":
-            default_model = "gpt-4"
+            default_model = "gemini-1.5-flash"
         else:
             default_model = "llama3.1:8b"
         self.model = os.getenv("DEFAULT_LLM", default_model)
 
         self.ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self.openai_key = os.getenv("OPENAI_API_KEY")
         self.gemini_key = os.getenv("GEMINI_API_KEY")
 
         # Check whether an Ollama server is reachable
         self.ollama_reachable = self._ollama_ready()
 
-        if self.provider == "openai" and openai is not None and self.openai_key:
-            openai.api_key = self.openai_key
-
         # Record a clear error if neither backend is available
         self.init_error: Optional[str] = None
-        if self.provider == "openai" and not self.openai_key:
-            self.init_error = "OPENAI_API_KEY is missing."
-        elif self.provider == "gemini" and not self.gemini_key:
+        if self.provider == "gemini" and not self.gemini_key:
             self.init_error = "GEMINI_API_KEY is missing."
         elif self.provider == "ollama" and not self.ollama_reachable:
             self.init_error = f"Ollama server not reachable at {self.ollama_base}."
-        elif not any([self.openai_key, self.gemini_key, self.ollama_reachable]):
+        elif not any([self.gemini_key, self.ollama_reachable]):
             self.init_error = (
-                f"No LLM backend configured. Set OPENAI_API_KEY or GEMINI_API_KEY or start an Ollama server at {self.ollama_base}."
+                f"No LLM backend configured. Set GEMINI_API_KEY or start an Ollama server at {self.ollama_base}."
             )
 
     def _ollama_ready(self) -> bool:
@@ -67,37 +53,40 @@ class LLMAdapter:
         except Exception:
             return False
 
-    async def _call_openai(self, messages: list) -> str:
-        if openai is None:
-            raise RuntimeError("openai package not available")
-        # run in thread to avoid blocking event loop
-        def sync_call():
-            # Support both new OpenAI and older ChatCompletion shapes
-            resp = None
-            create = getattr(openai, "ChatCompletion", None)
-            if create is not None:
-                resp = create.create(model=self.model, messages=messages)
-                # Try different access patterns
-                if hasattr(resp, "choices"):
-                    choice = resp.choices[0]
-                    if hasattr(choice, "message"):
-                        return getattr(choice.message, "content", "")
-                    return getattr(choice, "text", "")
+    async def chat(self, messages: list) -> str:
+        """Chat with unified client interface."""
+        from services.llm import GeminiClient
+        
+        if self.init_error:
+            # Basic heuristic fallback
+            return f"LLM unavailable: {self.init_error}"
+        
+        if self.provider == "gemini":
+            client = GeminiClient()
+            return client.chat(messages)
+        elif self.provider == "ollama":
+            return await self._call_ollama(messages)
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
 
-            # Fallback to chat completions via client method
-            try:
-                client_chat = getattr(openai, "chat", None)
-                if client_chat is not None and hasattr(client_chat, "completions"):
-                    resp = client_chat.completions.create(model=self.model, messages=messages)
-                    if resp and hasattr(resp, "choices"):
-                        return getattr(resp.choices[0].message, "content", "")
-            except Exception:
-                pass
-
-            # Last resort: stringify whatever we have
-            return str(resp or "")
-
-        return await asyncio.to_thread(sync_call)
+    async def generate(self, prompt: str, system: Optional[str] = None) -> str:
+        """Generate text with unified client interface."""
+        from services.llm import GeminiClient
+        
+        if self.init_error:
+            return f"LLM unavailable: {self.init_error}"
+        
+        if self.provider == "gemini":
+            client = GeminiClient()
+            return client.generate(prompt, system=system)
+        elif self.provider == "ollama":
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+            return await self._call_ollama(messages)
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
 
     async def _call_gemini(self, messages: list) -> str:
         if not self.gemini_key:
@@ -197,49 +186,16 @@ class LLMAdapter:
                 "error": self.init_error,
             }
 
-        # Prefer provider, but fall back gracefully if unavailable
-        if self.provider == "openai":
-            if self.openai_key and openai is not None:
-                resp = await self._call_openai(messages)
-            elif self.gemini_key:
-                resp = await self._call_gemini(messages)
-            elif self.ollama_reachable:
-                resp = await self._call_ollama(messages)
-            else:
-                return {
-                    "summary": "",
-                    "risks": [],
-                    "dates": [],
-                    "error": f"OPENAI_API_KEY is missing and no fallback LLM available.",
-                }
-        elif self.provider == "gemini":
-            if self.gemini_key:
-                resp = await self._call_gemini(messages)
-            elif self.openai_key and openai is not None:
-                resp = await self._call_openai(messages)
-            elif self.ollama_reachable:
-                resp = await self._call_ollama(messages)
-            else:
-                return {
-                    "summary": "",
-                    "risks": [],
-                    "dates": [],
-                    "error": f"GEMINI_API_KEY is missing and no fallback LLM available.",
-                }
-        else:
-            if self.ollama_reachable:
-                resp = await self._call_ollama(messages)
-            elif self.openai_key and openai is not None:
-                resp = await self._call_openai(messages)
-            elif self.gemini_key:
-                resp = await self._call_gemini(messages)
-            else:
-                return {
-                    "summary": "",
-                    "risks": [],
-                    "dates": [],
-                    "error": self.init_error,
-                }
+        # Route to configured provider
+        try:
+            resp = await self.chat(messages)
+        except Exception as e:
+            return {
+                "summary": "",
+                "risks": [],
+                "dates": [],
+                "error": str(e),
+            }
 
         # Attempt to parse JSON
         try:

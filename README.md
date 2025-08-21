@@ -12,11 +12,18 @@ Simple, fast contract review using AI. Upload → Extract → Summarise → Show
 1. Go to [Render](https://render.com) and create a new **Web Service** connected to this GitHub repository.
 2. Set the service root to `backend` and set environment variables:
    - `GEMINI_API_KEY=<your Google Gemini key>`
-   - `OPENAI_API_KEY=<your OpenAI key>` (optional)
-   - `PROVIDER_ORDER=gemini,openai`
 3. Build command: `pip install -r requirements.txt`
 4. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 5. Once deployed, note the public URL (e.g., `https://blackletter-api.onrender.com`) for your phone or frontend.
+
+## LLM Configuration
+
+This application uses Google Gemini as the primary LLM provider. To configure:
+
+1. **Get a Gemini API key** from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. **Set environment variables**:
+   - `GEMINI_API_KEY`: Your Google Gemini API key (required)
+   - `GEMINI_MODEL`: Model to use (optional, defaults to "gemini-1.5-flash")
 
 ## Quick Start (Windows)
 
@@ -33,12 +40,11 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Set your LLM API keys:
+Set your LLM API key:
 
 ```powershell
 setx GEMINI_API_KEY "<YOUR_GEMINI_KEY>"
-setx OPENAI_API_KEY "<YOUR_OPENAI_KEY>"  # optional
-setx PROVIDER_ORDER "gemini,openai"
+setx GEMINI_MODEL "gemini-1.5-flash"  # optional
 ```
 
 ## Ollama Migration Guide
@@ -66,8 +72,8 @@ setx LLM_PROVIDER "ollama"
 setx OLLAMA_URL "http://localhost:11434"  # default Ollama URL
 setx OLLAMA_MODEL "llama3.1"              # or your preferred model
 
-# Optional: Set fallback providers
-setx PROVIDER_ORDER "ollama,gemini,openai"
+# Keep Gemini as fallback (optional)
+setx GEMINI_API_KEY "<YOUR_GEMINI_KEY>"   # optional fallback
 ```
 
 ### 4. Start Ollama Server

@@ -1,3 +1,4 @@
+"""Test Gemini adapter functionality."""
 if __package__ is None or __package__ == "":
     import os
     import sys
@@ -6,12 +7,20 @@ if __package__ is None or __package__ == "":
 else:
     from ..services import llm
 
-class DummyClient:
-    def generate(self, prompt, system=None, max_tokens=800):
-        return "hi"
+from unittest.mock import Mock, patch
 
-def test_generate_text(monkeypatch):
-    monkeypatch.setenv("PROVIDER_ORDER", "gemini")
-    monkeypatch.setattr(llm, "_client_for", lambda provider, models: DummyClient())
-    result = llm.generate_text("hello")
-    assert result == "hi"
+def test_generate_text():
+    """Test generate_text function with mocked Gemini client."""
+    with patch('backend.services.llm.GeminiClient') as mock_client_class:
+        # Mock the client instance
+        mock_client = Mock()
+        mock_client.generate.return_value = "Generated text response"
+        mock_client_class.return_value = mock_client
+        
+        # Call the function
+        result = llm.generate_text("test prompt", system="test system")
+        
+        # Verify the client was created and called correctly
+        mock_client_class.assert_called_once()
+        mock_client.generate.assert_called_once_with("test prompt", system="test system")
+        assert result == "Generated text response"
