@@ -22,6 +22,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Define the frontend build directory
+FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), "../frontend/out")
+
+# Mount the frontend static files if the directory exists
+if os.path.exists(FRONTEND_BUILD_DIR):
+    app.mount("/", StaticFiles(directory=FRONTEND_BUILD_DIR, html=True), name="frontend")
+
 @app.get("/health")
 def health():
     return {"service": "blackletter", "status": "ok"}
@@ -45,11 +52,9 @@ if ENABLE_OCR:
 
 # app.include_router(llm_test.router,  prefix="/api", tags=["llm"])
 
-FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), "../frontend/out")
-
+# Serve frontend for all other paths if it's mounted
+# This ensures client-side routing works for Single Page Applications
 if os.path.exists(FRONTEND_BUILD_DIR):
-    app.mount("/", StaticFiles(directory=FRONTEND_BUILD_DIR, html=True), name="frontend")
-
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         index_path = os.path.join(FRONTEND_BUILD_DIR, "index.html")
