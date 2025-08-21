@@ -2,7 +2,11 @@
 Test module for OCR functionality with feature flag.
 """
 import os
+import sys
 from unittest.mock import patch
+
+# Add the parent directory to the Python path so we can import backend modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def test_ocr_disabled_by_default():
