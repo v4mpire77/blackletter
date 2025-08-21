@@ -1,7 +1,16 @@
-fastapi
-uvicorn[standard]
-python-multipart
-pydantic
-requests
-python-dotenv
-jinja2
+# Core API
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
+
+# PDF and Text Parsing
+pypdf==4.3.1
+python-docx==1.1.0
+
+# LLM clients
+google-generativeai==0.7.2
+openai==1.35.1
+httpx==0.28.1
+
+# Other dependencies
+python-dotenv==1.0.1
