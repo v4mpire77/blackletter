@@ -32,8 +32,17 @@ app.include_router(coverage.router,  prefix="/api", tags=["coverage"])
 app.include_router(redlines.router,  prefix="/api", tags=["redlines"])
 # Gemini endpoint for prompt testing
 app.include_router(gemini.router,    prefix="/api", tags=["gemini"])
-# OCR example endpoint (optional) - uncomment the import and this line to enable
-# app.include_router(ocr_example.router, prefix="/api", tags=["ocr"])
+
+# OCR router - conditionally mounted when ENABLE_OCR=true
+ENABLE_OCR = os.getenv("ENABLE_OCR", "false").lower() in {"1", "true", "yes"}
+if ENABLE_OCR:
+    try:
+        from .routers import ocr
+        app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
+    except ImportError:
+        # OCR dependencies not available - OCR functionality will be disabled
+        pass
+
 # app.include_router(llm_test.router,  prefix="/api", tags=["llm"])
 
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), "../frontend/out")
