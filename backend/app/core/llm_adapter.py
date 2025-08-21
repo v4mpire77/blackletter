@@ -1,4 +1,12 @@
-// ...existing code...
+def analyze_contract_with_llm(text, filename):
+    # Minimal stub for Gemini chat model integration
+    # Replace this with actual Gemini API logic as needed
+    return [
+        {
+            "issue": "Gemini chat model integration placeholder.",
+            "details": f"Analyzed {filename} with Gemini. Text length: {len(text)}"
+        }
+    ]
 import os
 from typing import Any, Dict, List, Optional
 
