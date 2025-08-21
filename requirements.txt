@@ -1,8 +1,11 @@
 chromadb
-openai
-pydantic
 fastapi
-uvicorn
+google-generativeai
+httpx==0.26.0
+openai
+pydantic==2.8.2
 pypdf
 python-docx
+python-multipart
 tiktoken
+uvicorn
