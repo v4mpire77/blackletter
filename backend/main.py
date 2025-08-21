@@ -40,5 +40,20 @@ if os.path.exists(FRONTEND_BUILD_DIR):
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
+        """Catch-all route to serve the React app for client-side routing"""
         index_path = os.path.join(FRONTEND_BUILD_DIR, "index.html")
-        return FileResponse(index_path)
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        else:
+            # Fallback if index.html doesn't exist
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Frontend not found")
+else:
+    @app.get("/")
+    async def root():
+        """Fallback route when frontend is not built"""
+        return {
+            "message": "Blackletter API is running",
+            "status": "Frontend not built - run 'npm run export' in frontend directory",
+            "api_docs": "/docs"
+        }
