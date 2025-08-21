@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils"; // New import
+import { Search, Loader2, LinkIcon } from "lucide-react"; // New import
 
 interface Citation {
   source: string;
@@ -42,43 +44,61 @@ export default function QA() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <Card>
+    <div className="flex min-h-screen flex-col items-center justify-center p-4"> // Modified
+      <Card className="w-full max-w-2xl shadow-lg rounded-lg"> // Modified
         <CardHeader>
-          <CardTitle>Ask a legal question</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center mb-4">Ask a legal question</CardTitle> // Modified
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+            <div className="relative space-y-2"> // Modified
               <Label htmlFor="question">Question</Label>
               <Input
                 id="question"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="What does clause 5 require?"
+                className="pl-10" // Modified
               />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /> // New
             </div>
-            <Button type="submit" disabled={!question || loading}>
-              {loading ? "Asking..." : "Ask"}
+            <Button type="submit" disabled={!question || loading} className="w-full bg-blue-600 text-white hover:bg-blue-700"> // Modified
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> // New
+                  Asking...
+                </>
+              ) : (
+                "Ask"
+              )}
             </Button>
           </form>
 
           {answer && (
-            <div className="mt-4 space-y-2">
-              <p>{answer}</p>
-              <ul className="list-disc list-inside">
-                {citations.map((c, i) => (
-                  <li key={i}>
-                    <a href={c.url} target="_blank" className="text-blue-500 underline">
-                      {c.source}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <Card className="mt-4 bg-gray-50 shadow-inner">
+              <CardContent className="space-y-4">
+                <p className="text-gray-800">{answer}</p>
+                {citations.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-gray-700">Citations:</h4>
+                    <ul className="list-none p-0 space-y-1">
+                      {citations.map((c, i) => (
+                        <li key={i} className="flex items-center text-sm text-gray-600">
+                          <LinkIcon className="mr-2 h-4 w-4 text-blue-500" />
+                          <a href={c.url} target="_blank" className="text-blue-500 hover:underline">
+                            {c.source}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
