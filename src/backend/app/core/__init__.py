@@ -1,1 +1,1 @@
-# backend.app.core package
+"""Core modules for Blackletter Systems."""

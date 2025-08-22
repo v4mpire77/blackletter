@@ -1,1 +1,1 @@
-# backend.app package
+"""Blackletter Systems backend application."""
