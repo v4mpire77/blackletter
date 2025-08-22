@@ -251,7 +251,7 @@ const ContractCard = ({ contract, onSelect }) => {
   const RiskIcon = riskConfig.icon;
   const StatusIcon = statusConfig.icon;
   const isUrgent = contract.priority === 'urgent';
-  const isNearDeadline = new Date(contract.deadline) - new Date() < 5 * 24 * 60 * 60 * 1000; // 5 days
+  const isNearDeadline = new Date(contract.deadline).getTime() - new Date().getTime() < 5 * 24 * 60 * 60 * 1000; // 5 days
 
   return (
     <div 
@@ -357,7 +357,8 @@ const UploadArea = ({ onUpload }) => {
     input.accept = '.pdf,.docx,.txt,.doc';
     input.onchange = async (e) => {
       await simulateUpload();
-      onUpload(Array.from(e.target.files));
+      const target = e.target as HTMLInputElement;
+      onUpload(Array.from(target.files || []));
     };
     input.click();
   };
