@@ -162,7 +162,7 @@ class SecurityMiddleware:
             elif content_type.startswith('application/vnd.openxmlformats-officedocument'):
                 # Check Office document magic numbers
                 if not (file_content.startswith(b'PK') or file_content.startswith(b'\xd0\xcf\x11\xe0')):
-                    return False
+ return False # OLE2 compound document signature for .doc files
             
             return True
             
