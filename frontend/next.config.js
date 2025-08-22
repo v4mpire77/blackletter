@@ -1,15 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Remove static export for web service deployment
-  // output: 'export',
-  // trailingSlash: true,
+  reactStrictMode: true,
   images: {
-    unoptimized: true
+    domains: ['localhost'],
   },
-  // Enable server-side rendering for better performance
-  experimental: {
-    serverActions: true,
-  }
-};
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  },
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig

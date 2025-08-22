@@ -1,0 +1,68 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: blackletter
+      POSTGRES_PASSWORD: blackletter
+      POSTGRES_DB: blackletter
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: adminadmin
+    volumes:
+      - minio_data:/data
+    ports: ["9000:9000", "9001:9001"]
+
+  weaviate:
+    image: semitechnologies/weaviate:1.25.7
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: /var/lib/weaviate
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    ports: ["8081:8080"]
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.8
+    environment:
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meili_data:/meili_data
+    ports: ["7700:7700"]
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    command: ["gotenberg", "--chromium-disable-javascript=true"]
+    ports: ["3001:3000"]
+
+  n8n:
+    image: n8nio/n8n:latest
+    ports: ["5678:5678"]
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: adminadmin
+
+  backend:
+    build: ./src/backend
+    env_file: .env
+    ports: ["8000:8000"]
+    depends_on: [db, minio, weaviate]
+
+  frontend:
+    build: ./frontend
+    env_file: .env
+    ports: ["3000:3000"]
+    depends_on: [backend]
+
+volumes: { db_data: {}, minio_data: {}, weaviate_data: {}, meili_data: {}, n8n_data: {} }

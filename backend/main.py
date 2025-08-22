@@ -1,29 +1,90 @@
+from __future__ import annotations
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+<<<<<<< HEAD
 from .routers import contracts, dashboard, rag, nlp_router
+=======
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
+from dotenv import load_dotenv
+>>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
 
-app = FastAPI(title="Blackletter Systems API")
+# Import the new Gemini router
+from .routers import contracts, gemini  # , ocr  # Commented out ocr import
 
-# Configure CORS
+load_dotenv()  # only needed locally
+
+app = FastAPI(title="Blackletter")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+<<<<<<< HEAD
         "https://blackletter-frontend.onrender.com",
         "https://blackletter-systems.onrender.com"
+=======
+        "http://localhost:3001",
+        "https://blackletter.vercel.app",
+        "*",
+>>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+<<<<<<< HEAD
 # Mount routers
 app.include_router(contracts.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(rag.router, prefix="/api/rag")
 app.include_router(nlp_router.router, prefix="/api")
+=======
+# Define the frontend build directory
+FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), "../frontend/out")
+>>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
 
-# Health check
+# Mount the frontend static files if the directory exists
+if os.path.exists(FRONTEND_BUILD_DIR):
+    # Mount the main frontend assets under /app/
+    app.mount("/app", StaticFiles(directory=FRONTEND_BUILD_DIR, html=True), name="app")
+
+    # Send root to the UI at /app/
+    @app.get("/")
+    def root():
+        return RedirectResponse("/app")
+
+    # Serve frontend for all other paths if it's mounted, for client-side routing
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # This is a fallback for client-side routing,
+        # ensuring all unmatched paths serve the index.html
+        index_path = os.path.join(FRONTEND_BUILD_DIR, "index.html")
+        return FileResponse(index_path)
+
+# Health check endpoint
 @app.get("/health")
-async def health_check():
-    return {"status": "ok"}
+def health():
+    return {"service": "blackletter", "status": "ok"}
+
+# API Routers
+app.include_router(contracts.router, prefix="/api", tags=["contracts"])
+app.include_router(gemini.router,    prefix="/api", tags=["gemini"])
+# OCR router - conditionally mounted when ENABLE_OCR=true
+# ENABLE_OCR = os.getenv("ENABLE_OCR", "false").lower() in {"1", "true", "yes"}
+# if ENABLE_OCR:
+#     try:
+#         from .routers import ocr
+#         app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
+#     except ImportError:
+#         # OCR dependencies not available - OCR functionality will be disabled
+#         pass
+
+# Optional: mount RAG sub-app if available
+try:
+    from rag.api import app as rag_app  # type: ignore
+    app.mount("/rag", rag_app)
+except Exception:
+    pass

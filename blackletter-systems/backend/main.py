@@ -208,6 +208,7 @@ def analyze_contract_with_llm(contract_text: str, filename: Optional[str] = None
     
     return issues
 
+<<<<<<< HEAD
 @app.get("/ocr-status")
 def ocr_status():
     """Check OCR capabilities and Tesseract installation status."""
@@ -229,6 +230,12 @@ def ocr_status():
         status["message"] = "Using simulated OCR (enhanced OCR dependencies not installed)"
     
     return status
+=======
+@app.get("/")
+async def root() -> Dict[str, str]:
+    """Root endpoint providing a simple service message."""
+    return {"message": "Blackletter API running"}
+>>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
 
 @app.get("/health")
 def health():

@@ -1,1 +1,1 @@
-# Backend package initializer
+# Makes backend a Python package
