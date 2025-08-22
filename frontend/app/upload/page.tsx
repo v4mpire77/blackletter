@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDropzone } from 'react-dropzone'
+import ProtectedRoute from '@/components/auth/ProtectedRoute'
 
 export default function UploadPage() {
   const router = useRouter()
@@ -65,7 +66,8 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <ProtectedRoute>
+      <div className="w-full max-w-4xl mx-auto">
       <div className="bg-white p-8 rounded-lg shadow-sm">
         <h1 className="text-2xl font-bold mb-6">Upload Document</h1>
         
@@ -151,7 +153,8 @@ export default function UploadPage() {
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }

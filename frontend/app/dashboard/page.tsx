@@ -4,29 +4,15 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { FileTextIcon, SearchIcon, ShieldCheckIcon, UploadIcon } from 'lucide-react'
+import ProtectedRoute from '@/components/auth/ProtectedRoute'
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
-
-  // Redirect to login if not authenticated
-  if (!loading && !user) {
-    router.push('/auth/login')
-    return null
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
+  const { user } = useAuth()
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <ProtectedRoute>
+      <div className="max-w-6xl mx-auto space-y-8">
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold text-[#0A2342]">Welcome to Your Dashboard</h1>
         <p className="text-gray-600">
@@ -123,6 +109,7 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </ProtectedRoute>
   )
 }

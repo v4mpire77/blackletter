@@ -3,7 +3,7 @@ RAG Router
 
 Handles RAG-specific endpoints for document storage, retrieval, and semantic search.
 """
-from fastapi import APIRouter, HTTPException, UploadFile, Form, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, Form, Depends, Request
 import logging
 from typing import List, Dict, Any, Optional
 import uuid
@@ -13,6 +13,7 @@ from ..app.core.llm_adapter import LLMAdapter
 from ..app.core.ocr import OCRProcessor
 from ..app.services.rag_store import rag_store
 from ..app.core.auth import verify_supabase_jwt
+from ..app.core.security import rate_limit, SecurityMiddleware
 from ..models.schemas import UploadResponse, AnalysisProgress
 
 router = APIRouter()
@@ -26,7 +27,12 @@ ocr_processor = OCRProcessor()
 upload_storage = {}
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_document(file: UploadFile, user=Depends(verify_supabase_jwt)):
+@rate_limit()
+async def upload_document(
+    file: UploadFile, 
+    user=Depends(verify_supabase_jwt),
+    request: Request = None
+):
     """
     Upload and process a document for RAG storage.
     
@@ -38,14 +44,13 @@ async def upload_document(file: UploadFile, user=Depends(verify_supabase_jwt)):
     """
     try:
         logger.info("RAG upload requested by user_id=%s filename=%s size=%s", user.get("sub"), file.filename, getattr(file, 'size', 'n/a'))
-        # Validate file
-        if not file.filename.lower().endswith(('.pdf', '.txt', '.docx')):
-            raise HTTPException(status_code=400, detail="Only PDF, TXT, and DOCX files supported")
-        
-        # Read file content
+        # Enhanced file validation using security middleware
         content = await file.read()
-        if len(content) > 10 * 1024 * 1024:  # 10MB limit
-            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+        is_valid, error_msg = SecurityMiddleware.validate_file_upload(
+            content, file.filename or "", file.content_type or ""
+        )
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_msg)
         
         # Generate document ID
         doc_id = str(uuid.uuid4())
@@ -92,11 +97,14 @@ async def upload_document(file: UploadFile, user=Depends(verify_supabase_jwt)):
         raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
 
 @router.post("/query")
+@rate_limit()
 async def query_documents(
     query: str = Form(...),
     doc_id: Optional[str] = Form(None),
     top_k: int = Form(5),
-    use_semantic_search: bool = Form(True)
+    use_semantic_search: bool = Form(True),
+    user=Depends(verify_supabase_jwt),
+    request: Request = None
 ):
     """
     Query documents using RAG.
@@ -185,7 +193,7 @@ async def get_document_chunks(doc_id: str):
         raise HTTPException(status_code=500, detail=f"Error retrieving document chunks: {str(e)}")
 
 @router.delete("/documents/{doc_id}")
-async def delete_document(doc_id: str):
+async def delete_document(doc_id: str, user=Depends(verify_supabase_jwt)):
     """
     Delete a document and all its chunks from the RAG store.
     """
@@ -202,7 +210,7 @@ async def delete_document(doc_id: str):
         raise HTTPException(status_code=500, detail=f"Error deleting document: {str(e)}")
 
 @router.get("/documents")
-async def list_documents():
+async def list_documents(user=Depends(verify_supabase_jwt)):
     """
     List all documents in the RAG store.
     """
@@ -232,7 +240,7 @@ async def list_documents():
         raise HTTPException(status_code=500, detail=f"Error listing documents: {str(e)}")
 
 @router.get("/stats")
-async def get_rag_stats():
+async def get_rag_stats(user=Depends(verify_supabase_jwt)):
     """
     Get statistics about the RAG store.
     """
@@ -254,7 +262,8 @@ async def search_documents(
     query: str = Form(...),
     doc_id: Optional[str] = Form(None),
     top_k: int = Form(10),
-    similarity_threshold: float = Form(0.7)
+    similarity_threshold: float = Form(0.7),
+    user=Depends(verify_supabase_jwt)
 ):
     """
     Search for specific content in documents.
@@ -300,7 +309,8 @@ async def search_documents(
 async def batch_query_documents(
     queries: List[str] = Form(...),
     doc_id: Optional[str] = Form(None),
-    top_k: int = Form(5)
+    top_k: int = Form(5),
+    user=Depends(verify_supabase_jwt)
 ):
     """
     Process multiple queries in batch.

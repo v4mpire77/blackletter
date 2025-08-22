@@ -7,7 +7,9 @@ import tempfile
 from typing import Dict, Any
 from datetime import datetime
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request
+from ..app.core.auth import verify_supabase_jwt
+from ..app.core.security import rate_limit, validate_file_upload, SecurityMiddleware
 
 # Import schemas with proper error handling
 try:
@@ -58,7 +60,12 @@ def _map_risk_to_severity(risk: str) -> str:
     return mapping.get(risk.lower(), "Medium")
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_contract(file: UploadFile = File(...)):
+@rate_limit()
+async def upload_contract(
+    file: UploadFile = File(...), 
+    user=Depends(verify_supabase_jwt),
+    request: Request = None
+):
     """
     Upload a contract file for later analysis.
     
@@ -69,20 +76,20 @@ async def upload_contract(file: UploadFile = File(...)):
         UploadResponse containing filename, size, and document ID
     """
     try:
-        # Validate file
-        if file.filename and not file.filename.lower().endswith(('.pdf', '.txt', '.doc', '.docx')):
-            raise HTTPException(status_code=400, detail="Unsupported file type. Please upload PDF, TXT, DOC, or DOCX files.")
-        
+        # Enhanced file validation using security middleware
         content = await file.read()
-        file_size = len(content)
+        is_valid, error_msg = SecurityMiddleware.validate_file_upload(
+            content, file.filename or "", file.content_type or ""
+        )
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_msg)
         
-        # File size validation
-        if file_size > 10 * 1024 * 1024:  # 10MB limit
-            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+        file_size = len(content)
         
         # Generate a unique ID for this document
         doc_id = str(uuid.uuid4())
-        safe_filename = file.filename or "unknown.pdf"
+        # Generate secure filename
+        safe_filename = SecurityMiddleware.generate_secure_filename(file.filename or "unknown.pdf")
         
         # Store in both storage systems for compatibility
         upload_info = {
@@ -117,7 +124,7 @@ async def upload_contract(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
 
 @router.post("/analyze/{doc_id}")
-async def analyze_contract(doc_id: str):
+async def analyze_contract(doc_id: str, user=Depends(verify_supabase_jwt)):
     """
     Analyze a previously uploaded contract by its document ID.
     
@@ -234,7 +241,7 @@ async def analyze_contract(doc_id: str):
         raise HTTPException(status_code=500, detail=f"Error analyzing contract: {str(e)}")
 
 @router.get("/analyze/{doc_id}/status")
-async def get_analysis_status(doc_id: str):
+async def get_analysis_status(doc_id: str, user=Depends(verify_supabase_jwt)):
     """Get the status of document analysis."""
     
     if doc_id not in upload_storage and doc_id not in UPLOADED_DOCUMENTS:
@@ -256,7 +263,7 @@ async def get_analysis_status(doc_id: str):
         }
 
 @router.get("/contracts/{doc_id}/findings")
-async def get_findings(doc_id: str):
+async def get_findings(doc_id: str, user=Depends(verify_supabase_jwt)):
     """Get detailed findings for a specific document."""
     if doc_id in analysis_storage:
         return analysis_storage[doc_id]

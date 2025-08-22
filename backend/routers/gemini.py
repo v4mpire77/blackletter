@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from ..app.core.auth import verify_supabase_jwt
 from pydantic import BaseModel
 import os
 import google.generativeai as genai
@@ -12,7 +13,7 @@ class GeminiChatResponse(BaseModel):
     response: str
 
 @router.post("/chat", response_model=GeminiChatResponse)
-def chat_with_gemini(request: GeminiChatRequest):
+def chat_with_gemini(request: GeminiChatRequest, user=Depends(verify_supabase_jwt)):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in environment.")

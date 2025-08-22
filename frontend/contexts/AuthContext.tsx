@@ -1,7 +1,24 @@
 'use client'
 
+/**
+ * Authentication Context Provider
+ * 
+ * Provides authentication state and methods throughout the application.
+ * Follows Context Engineering Framework standards for consistency and maintainability.
+ * 
+ * Features:
+ * - User session management
+ * - Authentication state tracking
+ * - Sign up/in/out functionality
+ * - Password reset handling
+ * 
+ * Performance Targets:
+ * - Auth state changes: < 100ms
+ * - Sign in/up operations: < 1s
+ */
+
 import { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { createSupabaseClient } from '@/lib/supabase'
 
 interface AuthContextType {
@@ -35,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
@@ -46,34 +63,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const signUp = async (email: string, password: string, metadata?: object) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata,
-      },
-    })
-    return { data, error }
+    const startTime = performance.now()
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
+        },
+      })
+      const duration = performance.now() - startTime
+      console.debug(`Sign up operation completed in ${duration}ms`)
+      return { data, error }
+    } catch (e) {
+      const duration = performance.now() - startTime
+      console.error(`Sign up failed after ${duration}ms:`, e)
+      return { data: null, error: e as Error }
+    }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { data, error }
+    const startTime = performance.now()
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      const duration = performance.now() - startTime
+      console.debug(`Sign in operation completed in ${duration}ms`)
+      return { data, error }
+    } catch (e) {
+      const duration = performance.now() - startTime
+      console.error(`Sign in failed after ${duration}ms:`, e)
+      return { data: null, error: e as Error }
+    }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    const startTime = performance.now()
+    try {
+      const { error } = await supabase.auth.signOut()
+      const duration = performance.now() - startTime
+      console.debug(`Sign out operation completed in ${duration}ms`)
+      return { error }
+    } catch (e) {
+      const duration = performance.now() - startTime
+      console.error(`Sign out failed after ${duration}ms:`, e)
+      return { error: e as Error }
+    }
   }
 
   const resetPassword = async (email: string) => {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
-    return { data, error }
+    const startTime = performance.now()
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+      const duration = performance.now() - startTime
+      console.debug(`Password reset operation completed in ${duration}ms`)
+      return { data, error }
+    } catch (e) {
+      const duration = performance.now() - startTime
+      console.error(`Password reset failed after ${duration}ms:`, e)
+      return { data: null, error: e as Error }
+    }
   }
 
   const value = {

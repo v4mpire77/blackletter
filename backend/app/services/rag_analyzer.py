@@ -4,20 +4,246 @@ RAG Analyzer Service
 Integrates RAG capabilities with contract analysis for enhanced legal document processing.
 Following Context Engineering Framework standards for consistency, quality, and maintainability.
 """
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 import uuid
 import logging
-import asyncio
-from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from collections import defaultdict
 
 from ..core.llm_adapter import LLMAdapter
-from .rag_store import rag_store, TextChunk
+from .rag_store import rag_store
 from .vague_detector import VagueTermsDetector
-from .gemini_judge import gemini_judge
+
+# Input validation decorator
+def validate_input(**validators):
+    """
+    Decorator for validating method inputs following framework standards.
+    
+    Args:
+        validators: Dictionary of parameter names and their validation functions
+        
+    Example:
+        @validate_input(
+            doc_id=lambda x: bool(x and x.strip()),
+            text=lambda x: bool(x and len(x.strip()) > 0)
+        )
+        def my_method(self, doc_id: str, text: str):
+            ...
+    """
+    def decorator(func):
+        async def wrapper(self, *args, **kwargs):
+            # Get function signature
+            import inspect
+            sig = inspect.signature(func)
+            bound_args = sig.bind(self, *args, **kwargs)
+            bound_args.apply_defaults()
+            
+            # Get operation name for metrics
+            operation_name = func.__name__
+            
+            # Validate each parameter
+            for param_name, validator in validators.items():
+                if param_name in bound_args.arguments:
+                    value = bound_args.arguments[param_name]
+                    if not validator(value):
+                        error_msg = f"Invalid {param_name}: validation failed"
+                        if hasattr(self, 'metrics'):
+                            self.metrics.record_operation(
+                                operation_name=operation_name,
+                                success=False,
+                                duration_ms=0,
+                                error_type="VALIDATION_ERROR"
+                            )
+                        raise RAGAnalysisError(error_msg)
+            
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+# Enhanced metrics tracking
+@dataclass
+class RAGMetrics:
+    """
+    Tracks comprehensive metrics for RAG operations.
+    
+    Features:
+        - Operation tracking (success/failure)
+        - Performance monitoring
+        - Error analysis
+        - Resource usage tracking
+        - Batch processing metrics
+        
+    Performance Targets:
+        - Average latency: < 2000ms
+        - Error rate: < 1%
+        - Success rate: > 95%
+        - Resource efficiency: < 100MB per operation
+    """
+    # Basic operation metrics
+    total_operations: int = 0
+    successful_operations: int = 0
+    failed_operations: int = 0
+    total_processing_time_ms: float = 0.0
+    
+    # Detailed error tracking
+    error_counts: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    error_details: List[Dict[str, Any]] = field(default_factory=list)
+    
+    # Performance metrics
+    avg_chunk_count: float = 0.0
+    operation_latencies: Dict[str, List[float]] = field(default_factory=lambda: defaultdict(list))
+    peak_memory_usage: Dict[str, float] = field(default_factory=dict)
+    
+    # Batch processing metrics
+    batch_operations: int = 0
+    batch_success_rate: float = 0.0
+    avg_batch_size: float = 0.0
+    batch_processing_times: List[float] = field(default_factory=list)
+    
+    # Resource usage
+    embedding_cache_hits: int = 0
+    embedding_cache_misses: int = 0
+    total_tokens_processed: int = 0
+    avg_memory_per_operation: float = 0.0
+    
+    def record_operation(
+        self,
+        operation_name: str,
+        success: bool,
+        duration_ms: float,
+        error_type: Optional[str] = None,
+        error_details: Optional[Dict[str, Any]] = None,
+        memory_usage: Optional[float] = None,
+        tokens_processed: Optional[int] = None,
+        is_batch: bool = False,
+        batch_size: Optional[int] = None,
+        cache_hit: Optional[bool] = None
+    ):
+        """
+        Record comprehensive metrics for an operation.
+        
+        Args:
+            operation_name: Name of the operation
+            success: Whether operation succeeded
+            duration_ms: Operation duration in milliseconds
+            error_type: Type of error if operation failed
+            error_details: Detailed error information
+            memory_usage: Peak memory usage in MB
+            tokens_processed: Number of tokens processed
+            is_batch: Whether this was a batch operation
+            batch_size: Size of batch if applicable
+            cache_hit: Whether operation hit embedding cache
+        """
+        # Basic operation tracking
+        self.total_operations += 1
+        if success:
+            self.successful_operations += 1
+        else:
+            self.failed_operations += 1
+            if error_type:
+                self.error_counts[error_type] += 1
+            if error_details:
+                self.error_details.append({
+                    "type": error_type,
+                    "details": error_details,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "operation": operation_name
+                })
+        
+        # Performance metrics
+        self.total_processing_time_ms += duration_ms
+        self.operation_latencies[operation_name].append(duration_ms)
+        
+        if memory_usage:
+            self.peak_memory_usage[operation_name] = max(
+                self.peak_memory_usage.get(operation_name, 0),
+                memory_usage
+            )
+            self.avg_memory_per_operation = (
+                (self.avg_memory_per_operation * (self.total_operations - 1) + memory_usage)
+                / self.total_operations
+            )
+        
+        # Resource tracking
+        if tokens_processed:
+            self.total_tokens_processed += tokens_processed
+        
+        if cache_hit is not None:
+            if cache_hit:
+                self.embedding_cache_hits += 1
+            else:
+                self.embedding_cache_misses += 1
+        
+        # Batch metrics
+        if is_batch and batch_size:
+            self.batch_operations += 1
+            self.batch_processing_times.append(duration_ms)
+            self.avg_batch_size = (
+                (self.avg_batch_size * (self.batch_operations - 1) + batch_size)
+                / self.batch_operations
+            )
+            if success:
+                self.batch_success_rate = (
+                    (self.batch_success_rate * (self.batch_operations - 1) + 100)
+                    / self.batch_operations
+                )
+    
+    def get_success_rate(self) -> float:
+        """Calculate the success rate of operations."""
+        return (self.successful_operations / self.total_operations * 100) if self.total_operations > 0 else 0.0
+    
+    def get_avg_latency(self, operation_name: Optional[str] = None) -> float:
+        """Get average latency for all or specific operations."""
+        if operation_name:
+            latencies = self.operation_latencies.get(operation_name, [])
+            return sum(latencies) / len(latencies) if latencies else 0.0
+        return self.total_processing_time_ms / self.total_operations if self.total_operations > 0 else 0.0
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert metrics to dictionary format."""
+        return {
+            "total_operations": self.total_operations,
+            "success_rate": self.get_success_rate(),
+            "avg_latency_ms": self.get_avg_latency(),
+            "error_distribution": dict(self.error_counts),
+            "operation_latencies": {
+                op: sum(lats) / len(lats) if lats else 0.0
+                for op, lats in self.operation_latencies.items()
+            }
+        }
 
 # Configure logging following framework standards
 logger = logging.getLogger(__name__)
+
+def structured_log(
+    logger_instance: logging.Logger,
+    level: str,
+    message: str,
+    correlation_id: str,
+    operation: str,
+    **kwargs
+) -> None:
+    """
+    Helper function for structured logging following framework standards.
+    
+    Args:
+        logger_instance: Logger instance to use
+        level: Log level (info, error, debug, warning)
+        message: Log message
+        correlation_id: Request correlation ID
+        operation: Operation name
+        **kwargs: Additional log context
+    """
+    log_data = {
+        "correlation_id": correlation_id,
+        "operation": operation,
+        "timestamp": datetime.utcnow().isoformat(),
+        **kwargs
+    }
+    
+    log_func = getattr(logger_instance, level)
+    log_func(message, extra=log_data)
 
 class RAGAnalysisError(Exception):
     """Custom exception for RAG analysis errors."""
@@ -85,14 +311,23 @@ class RAGAnalyzer:
     Integrates RAG capabilities with contract analysis for enhanced legal document processing.
     Following Context Engineering Framework standards for consistency, quality, and maintainability.
     
+    Features:
+        - Single document analysis
+        - Batch document processing
+        - Advanced search filters
+        - Export capabilities
+        - Analytics tracking
+    
     Attributes:
         llm_adapter: LLM adapter for AI processing
         vague_detector: Vague terms detection service
         
     Performance Targets:
-        - Analysis completion: < 30 seconds for typical documents
+        - Single analysis completion: < 30 seconds for typical documents
+        - Batch processing: < 20 seconds per document
         - Query response time: < 2 seconds
         - Error rate: < 1% for valid inputs
+        - Batch success rate: > 95%
     """
     
     def __init__(self) -> None:
@@ -100,11 +335,35 @@ class RAGAnalyzer:
         try:
             self.llm_adapter = LLMAdapter()
             self.vague_detector = VagueTermsDetector()
-            logger.info("RAGAnalyzer initialized successfully")
+            self.metrics = RAGMetrics()
+            correlation_id = str(uuid.uuid4())
+            structured_log(
+                logger,
+                "info",
+                "RAGAnalyzer initialized successfully",
+                correlation_id,
+                "initialize",
+                component="RAGAnalyzer"
+            )
         except Exception as e:
-            logger.error(f"Failed to initialize RAGAnalyzer: {str(e)}")
-            raise RAGAnalysisError(f"Initialization failed: {str(e)}") from e
+            correlation_id = str(uuid.uuid4())
+            error_msg = f"Failed to initialize RAGAnalyzer: {str(e)}"
+            structured_log(
+                logger,
+                "error",
+                error_msg,
+                correlation_id,
+                "initialize",
+                component="RAGAnalyzer",
+                error_type=e.__class__.__name__,
+                error_details=str(e)
+            )
+            raise RAGAnalysisError(error_msg) from e
     
+    @validate_input(
+        doc_id=lambda x: bool(x and x.strip()),
+        text=lambda x: bool(x and x.strip())
+    )
     async def analyze_contract_with_rag(
         self, 
         doc_id: str, 
@@ -132,53 +391,157 @@ class RAGAnalyzer:
             Target: < 30 seconds for documents up to 50 pages
             Timeout: 120 seconds maximum
         """
+        operation_name = "analyze_contract"
         start_time = datetime.utcnow()
+        correlation_id = str(uuid.uuid4())
         
         # Input validation
         if not doc_id or not doc_id.strip():
-            raise RAGAnalysisError("Document ID is required")
+            error_msg = "Document ID is required"
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=False,
+                duration_ms=0,
+                error_type="VALIDATION_ERROR"
+            )
+            raise RAGAnalysisError(error_msg)
         
         if not text or not text.strip():
-            raise RAGAnalysisError("Document text is required")
+            error_msg = "Document text is required"
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=False,
+                duration_ms=0,
+                error_type="VALIDATION_ERROR"
+            )
+            raise RAGAnalysisError(error_msg)
         
-        logger.info(f"Starting RAG analysis for document {doc_id}")
+        structured_log(
+            logger,
+            "info",
+            f"Starting RAG analysis for document {doc_id}",
+            correlation_id,
+            operation_name,
+            doc_id=doc_id
+        )
         
         try:
-            # Initialize metadata
+            # Initialize metadata with correlation ID
             metadata = metadata or {}
+            metadata["correlation_id"] = correlation_id
             
             # Store document in RAG store
-            logger.debug(f"Storing document {doc_id} in RAG store")
+            structured_log(
+                logger,
+                "debug",
+                f"Storing document {doc_id} in RAG store",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                step="store_document"
+            )
             chunks = await rag_store.store_document(doc_id, text, metadata)
-            logger.info(f"Created {len(chunks)} chunks for document {doc_id}")
+            structured_log(
+                logger,
+                "info",
+                f"Created {len(chunks)} chunks for document {doc_id}",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                chunks_created=len(chunks)
+            )
             
             # Perform basic contract analysis
-            logger.debug(f"Performing basic contract analysis for {doc_id}")
+            structured_log(
+                logger,
+                "debug",
+                f"Performing basic contract analysis for {doc_id}",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                step="basic_analysis"
+            )
             basic_analysis = await self.llm_adapter.analyze_contract(text)
             
             # Find vague terms
-            logger.debug(f"Detecting vague terms in document {doc_id}")
+            structured_log(
+                logger,
+                "debug",
+                f"Detecting vague terms in document {doc_id}",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                step="vague_terms_detection"
+            )
             vague_hits = self.vague_detector.find_vague_spans(text)
-            logger.info(f"Found {len(vague_hits)} vague terms in document {doc_id}")
+            structured_log(
+                logger,
+                "info",
+                f"Found {len(vague_hits)} vague terms in document {doc_id}",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                vague_terms_found=len(vague_hits)
+            )
             
             # Enhanced analysis using RAG
-            logger.debug(f"Generating RAG insights for document {doc_id}")
+            structured_log(
+                logger,
+                "debug",
+                f"Generating RAG insights for document {doc_id}",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                step="rag_insights"
+            )
             rag_insights = await self._generate_rag_insights(doc_id, text, vague_hits)
             
             # Generate compliance analysis
-            logger.debug(f"Performing compliance analysis for document {doc_id}")
+            structured_log(
+                logger,
+                "debug",
+                f"Performing compliance analysis for document {doc_id}",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                step="compliance_analysis"
+            )
             compliance_analysis = await self._analyze_compliance(doc_id, text)
             
             # Generate risk assessment
-            logger.debug(f"Performing risk assessment for document {doc_id}")
+            structured_log(
+                logger,
+                "debug",
+                f"Performing risk assessment for document {doc_id}",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                step="risk_assessment"
+            )
             risk_assessment = await self._assess_risks(doc_id, text)
             
             # Calculate processing time
             end_time = datetime.utcnow()
             processing_time_ms = (end_time - start_time).total_seconds() * 1000
             
-            logger.info(
-                f"RAG analysis completed for document {doc_id} in {processing_time_ms:.2f}ms"
+            # Record successful operation metrics
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=True,
+                duration_ms=processing_time_ms
+            )
+            
+            structured_log(
+                logger,
+                "info",
+                f"RAG analysis completed for document {doc_id} in {processing_time_ms:.2f}ms",
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                duration_ms=processing_time_ms,
+                chunks_created=len(chunks),
+                vague_terms_found=len(vague_hits),
+                status="completed"
             )
             
             return RAGAnalysisResult(
@@ -194,15 +557,41 @@ class RAGAnalyzer:
             )
             
         except RAGAnalysisError:
-            # Re-raise custom errors
+            # Record error metrics and re-raise
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=False,
+                duration_ms=0,
+                error_type="RAG_ANALYSIS_ERROR"
+            )
             raise
+            
         except Exception as e:
             # Calculate processing time even for errors
             end_time = datetime.utcnow()
             processing_time_ms = (end_time - start_time).total_seconds() * 1000
             
             error_msg = f"Analysis failed for document {doc_id}: {str(e)}"
-            logger.error(error_msg, exc_info=True)
+            structured_log(
+                logger,
+                "error",
+                error_msg,
+                correlation_id,
+                operation_name,
+                doc_id=doc_id,
+                error_type=e.__class__.__name__,
+                duration_ms=processing_time_ms,
+                status="failed",
+                exc_info=True
+            )
+            
+            # Record error metrics
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=False,
+                duration_ms=processing_time_ms,
+                error_type=e.__class__.__name__
+            )
             
             return RAGAnalysisResult(
                 doc_id=doc_id,
@@ -362,6 +751,10 @@ class RAGAnalyzer:
         
         return risk_assessment
     
+    @validate_input(
+        doc_id=lambda x: bool(x and x.strip()),
+        query=lambda x: bool(x and x.strip())
+    )
     async def query_contract(self, doc_id: str, query: str, 
                            include_context: bool = True) -> Dict[str, Any]:
         """
@@ -374,12 +767,53 @@ class RAGAnalyzer:
             
         Returns:
             Query response with relevant information
+            
+        Performance:
+            Target: < 2 seconds for typical queries
+            Timeout: 10 seconds maximum
         """
+        operation_name = "query_contract"
+        start_time = datetime.utcnow()
+        correlation_id = str(uuid.uuid4())
         try:
+            # Input validation
+            if not doc_id or not doc_id.strip():
+                error_msg = "Document ID is required"
+                self.metrics.record_operation(
+                    operation_name=operation_name,
+                    success=False,
+                    duration_ms=0,
+                    error_type="VALIDATION_ERROR"
+                )
+                return {"error": error_msg}
+            
+            if not query or not query.strip():
+                error_msg = "Query text is required"
+                self.metrics.record_operation(
+                    operation_name=operation_name,
+                    success=False,
+                    duration_ms=0,
+                    error_type="VALIDATION_ERROR"
+                )
+                return {"error": error_msg}
+            
+            logger.info(f"Processing query for document {doc_id}", extra={
+                "correlation_id": correlation_id,
+                "doc_id": doc_id,
+                "operation": operation_name
+            })
+            
             # Get query embedding
             query_embedding = await self.llm_adapter.get_embeddings([query])
             if not query_embedding:
-                return {"error": "Failed to generate query embedding"}
+                error_msg = "Failed to generate query embedding"
+                self.metrics.record_operation(
+                    operation_name=operation_name,
+                    success=False,
+                    duration_ms=(datetime.utcnow() - start_time).total_seconds() * 1000,
+                    error_type="EMBEDDING_ERROR"
+                )
+                return {"error": error_msg}
             
             # Retrieve similar chunks
             similar_chunks = await rag_store.retrieve_similar(
@@ -387,20 +821,39 @@ class RAGAnalyzer:
             )
             
             if not similar_chunks:
+                # This is not an error, just no results found
+                processing_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+                self.metrics.record_operation(
+                    operation_name=operation_name,
+                    success=True,
+                    duration_ms=processing_time_ms
+                )
                 return {
                     "answer": "No relevant information found in the contract for this query.",
                     "chunks": [],
-                    "query": query
+                    "query": query,
+                    "processing_time_ms": processing_time_ms
                 }
             
             # Generate response using context
             context_chunks = [chunk.text for chunk, score in similar_chunks]
             answer = await self.llm_adapter.generate_with_context(query, context_chunks)
             
+            # Calculate processing time
+            processing_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            
+            # Record successful operation
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=True,
+                duration_ms=processing_time_ms
+            )
+            
             response = {
                 "answer": answer,
                 "query": query,
-                "total_chunks_retrieved": len(similar_chunks)
+                "total_chunks_retrieved": len(similar_chunks),
+                "processing_time_ms": processing_time_ms
             }
             
             if include_context:
@@ -416,11 +869,52 @@ class RAGAnalyzer:
                     })
                 response["chunks"] = chunk_details
             
+            logger.info(
+                f"Query processed successfully for document {doc_id}",
+                extra={
+                    "correlation_id": correlation_id,
+                    "doc_id": doc_id,
+                    "operation": operation_name,
+                    "duration_ms": processing_time_ms,
+                    "chunks_retrieved": len(similar_chunks)
+                }
+            )
+            
             return response
             
         except Exception as e:
-            return {"error": f"Error processing query: {str(e)}"}
+            error_msg = f"Error processing query: {str(e)}"
+            processing_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            
+            # Record error metrics
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=False,
+                duration_ms=processing_time_ms,
+                error_type=e.__class__.__name__
+            )
+            
+            logger.error(
+                error_msg,
+                extra={
+                    "correlation_id": correlation_id,
+                    "doc_id": doc_id,
+                    "operation": operation_name,
+                    "error_type": e.__class__.__name__,
+                    "duration_ms": processing_time_ms
+                },
+                exc_info=True
+            )
+            
+            return {
+                "error": error_msg,
+                "processing_time_ms": processing_time_ms
+            }
     
+    @validate_input(
+        doc_ids=lambda x: bool(x and len(x) > 0),
+        comparison_criteria=lambda x: bool(x and len(x) > 0)
+    )
     async def compare_contracts(self, doc_ids: List[str], 
                               comparison_criteria: List[str]) -> Dict[str, Any]:
         """
@@ -432,37 +926,299 @@ class RAGAnalyzer:
             
         Returns:
             Comparison results
+            
+        Performance:
+            Target: < 5 seconds per document for typical comparisons
+            Timeout: 30 seconds maximum
         """
-        comparison_results = {}
-        
-        for criterion in comparison_criteria:
-            criterion_results = {}
+        operation_name = "compare_contracts"
+        start_time = datetime.utcnow()
+        correlation_id = str(uuid.uuid4())
+        try:
+            # Input validation
+            if not doc_ids:
+                error_msg = "Document IDs list is required"
+                self.metrics.record_operation(
+                    operation_name=operation_name,
+                    success=False,
+                    duration_ms=0,
+                    error_type="VALIDATION_ERROR"
+                )
+                return {"error": error_msg}
             
-            for doc_id in doc_ids:
-                try:
-                    # Query each contract for the criterion
-                    query = f"What are the {criterion} in this contract?"
-                    result = await self.query_contract(doc_id, query, include_context=False)
-                    
-                    criterion_results[doc_id] = {
-                        "answer": result.get("answer", "No information found"),
-                        "chunks_retrieved": result.get("total_chunks_retrieved", 0)
-                    }
-                    
-                except Exception as e:
-                    criterion_results[doc_id] = {
-                        "error": str(e),
-                        "chunks_retrieved": 0
-                    }
+            if not comparison_criteria:
+                error_msg = "Comparison criteria list is required"
+                self.metrics.record_operation(
+                    operation_name=operation_name,
+                    success=False,
+                    duration_ms=0,
+                    error_type="VALIDATION_ERROR"
+                )
+                return {"error": error_msg}
             
-            comparison_results[criterion] = criterion_results
-        
-        return {
-            "comparison_criteria": comparison_criteria,
-            "documents_compared": doc_ids,
-            "results": comparison_results
-        }
+            logger.info(
+                f"Starting contract comparison for {len(doc_ids)} documents",
+                extra={
+                    "correlation_id": correlation_id,
+                    "doc_count": len(doc_ids),
+                    "criteria_count": len(comparison_criteria),
+                    "operation": operation_name
+                }
+            )
+            
+            comparison_results = {}
+            total_queries = 0
+            successful_queries = 0
+            
+            for criterion in comparison_criteria:
+                criterion_results = {}
+                
+                for doc_id in doc_ids:
+                    try:
+                        # Query each contract for the criterion
+                        query = f"What are the {criterion} in this contract?"
+                        total_queries += 1
+                        result = await self.query_contract(doc_id, query, include_context=False)
+                        
+                        if "error" not in result:
+                            successful_queries += 1
+                            criterion_results[doc_id] = {
+                                "answer": result.get("answer", "No information found"),
+                                "chunks_retrieved": result.get("total_chunks_retrieved", 0),
+                                "processing_time_ms": result.get("processing_time_ms", 0)
+                            }
+                        else:
+                            criterion_results[doc_id] = {
+                                "error": result["error"],
+                                "chunks_retrieved": 0,
+                                "processing_time_ms": result.get("processing_time_ms", 0)
+                            }
+                        
+                    except Exception as e:
+                        criterion_results[doc_id] = {
+                            "error": str(e),
+                            "chunks_retrieved": 0,
+                            "processing_time_ms": 0
+                        }
+                
+                comparison_results[criterion] = criterion_results
+            
+            # Calculate total processing time
+            processing_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            
+            # Record metrics
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=True,
+                duration_ms=processing_time_ms
+            )
+            
+            logger.info(
+                "Contract comparison completed",
+                extra={
+                    "correlation_id": correlation_id,
+                    "doc_count": len(doc_ids),
+                    "criteria_count": len(comparison_criteria),
+                    "operation": operation_name,
+                    "duration_ms": processing_time_ms,
+                    "successful_queries": successful_queries,
+                    "total_queries": total_queries
+                }
+            )
+            
+            return {
+                "comparison_criteria": comparison_criteria,
+                "documents_compared": doc_ids,
+                "results": comparison_results,
+                "processing_time_ms": processing_time_ms,
+                "successful_queries": successful_queries,
+                "total_queries": total_queries
+            }
+            
+        except Exception as e:
+            error_msg = f"Error comparing contracts: {str(e)}"
+            processing_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            
+            # Record error metrics
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=False,
+                duration_ms=processing_time_ms,
+                error_type=e.__class__.__name__
+            )
+            
+            logger.error(
+                error_msg,
+                extra={
+                    "correlation_id": correlation_id,
+                    "doc_count": len(doc_ids),
+                    "criteria_count": len(comparison_criteria),
+                    "operation": operation_name,
+                    "error_type": e.__class__.__name__,
+                    "duration_ms": processing_time_ms
+                },
+                exc_info=True
+            )
+            
+            return {
+                "error": error_msg,
+                "processing_time_ms": processing_time_ms
+            }
     
+    @validate_input(
+        doc_ids=lambda x: bool(x and len(x) > 0 and all(id.strip() for id in x))
+    )
+    async def batch_analyze_contracts(
+        self,
+        doc_ids: List[str],
+        parallel_limit: int = 5,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Perform batch analysis of multiple contracts using RAG capabilities.
+        
+        Args:
+            doc_ids: List of document identifiers
+            parallel_limit: Maximum number of parallel analyses
+            metadata: Optional metadata to apply to all documents
+            
+        Returns:
+            Batch analysis results with success rate and timing metrics
+            
+        Performance:
+            Target: < 20 seconds per document
+            Timeout: 60 seconds per document
+            Batch size limit: 50 documents
+        """
+        operation_name = "batch_analyze"
+        start_time = datetime.utcnow()
+        correlation_id = str(uuid.uuid4())
+        
+        if len(doc_ids) > 50:
+            error_msg = "Batch size exceeds limit of 50 documents"
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=False,
+                duration_ms=0,
+                error_type="VALIDATION_ERROR"
+            )
+            return {"error": error_msg}
+        
+        structured_log(
+            logger,
+            "info",
+            f"Starting batch analysis of {len(doc_ids)} documents",
+            correlation_id,
+            operation_name,
+            batch_size=len(doc_ids)
+        )
+        
+        results = {
+            "successful": [],
+            "failed": [],
+            "total_documents": len(doc_ids),
+            "success_rate": 0.0,
+            "total_processing_time_ms": 0,
+            "avg_processing_time_ms": 0
+        }
+        
+        try:
+            import asyncio
+            from asyncio import Semaphore
+            
+            sem = Semaphore(parallel_limit)
+            
+            async def analyze_with_semaphore(doc_id: str) -> Tuple[str, Dict[str, Any]]:
+                async with sem:
+                    try:
+                        result = await self.analyze_contract_with_rag(doc_id, text="", metadata=metadata)
+                        return doc_id, {"success": True, "result": result}
+                    except Exception as e:
+                        return doc_id, {"success": False, "error": str(e)}
+            
+            # Create tasks for all documents
+            tasks = [analyze_with_semaphore(doc_id) for doc_id in doc_ids]
+            
+            # Wait for all tasks to complete
+            completed = await asyncio.gather(*tasks)
+            
+            # Process results
+            for doc_id, result in completed:
+                if result["success"]:
+                    results["successful"].append({
+                        "doc_id": doc_id,
+                        "result": result["result"]
+                    })
+                else:
+                    results["failed"].append({
+                        "doc_id": doc_id,
+                        "error": result["error"]
+                    })
+            
+            # Calculate metrics
+            end_time = datetime.utcnow()
+            total_time_ms = (end_time - start_time).total_seconds() * 1000
+            success_rate = len(results["successful"]) / len(doc_ids) * 100
+            
+            results.update({
+                "success_rate": round(success_rate, 2),
+                "total_processing_time_ms": round(total_time_ms, 2),
+                "avg_processing_time_ms": round(total_time_ms / len(doc_ids), 2)
+            })
+            
+            # Record metrics
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=True,
+                duration_ms=total_time_ms
+            )
+            
+            structured_log(
+                logger,
+                "info",
+                f"Batch analysis completed with {success_rate:.2f}% success rate",
+                correlation_id,
+                operation_name,
+                success_rate=success_rate,
+                duration_ms=total_time_ms,
+                successful_count=len(results["successful"]),
+                failed_count=len(results["failed"])
+            )
+            
+            return results
+            
+        except Exception as e:
+            error_msg = f"Batch analysis failed: {str(e)}"
+            end_time = datetime.utcnow()
+            total_time_ms = (end_time - start_time).total_seconds() * 1000
+            
+            self.metrics.record_operation(
+                operation_name=operation_name,
+                success=False,
+                duration_ms=total_time_ms,
+                error_type=e.__class__.__name__
+            )
+            
+            structured_log(
+                logger,
+                "error",
+                error_msg,
+                correlation_id,
+                operation_name,
+                error_type=e.__class__.__name__,
+                duration_ms=total_time_ms,
+                exc_info=True
+            )
+            
+            return {
+                "error": error_msg,
+                "total_documents": len(doc_ids),
+                "processing_time_ms": total_time_ms
+            }
+    
+    @validate_input(
+        doc_id=lambda x: bool(x and x.strip())
+    )
     async def generate_summary_report(self, doc_id: str) -> Dict[str, Any]:
         """Generate a comprehensive summary report for a contract."""
         try:
