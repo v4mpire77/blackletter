@@ -1,12 +1,14 @@
-"""
-Vague Terms Detector Service
-
-Detects ambiguous language in contracts using regex patterns.
-"""
 import re
-import json
-from typing import List, Dict, Tuple, Optional
-from pathlib import Path
+from typing import List, Dict, Any, Tuple
+from dataclasses import dataclass
+
+@dataclass
+class VagueTerm:
+    pattern: str
+    category: str
+    severity: str
+    description: str
+    suggested_fix: str
 
 class VagueTermsDetector:
     def __init__(self, rules_path: Optional[str] = None):

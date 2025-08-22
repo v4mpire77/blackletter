@@ -1,120 +1,117 @@
-# Blackletter Systems - Deployment Guide
+# Blackletter Systems - Render Deployment Guide
 
-## 🚀 Deployment to Render.com
+## Overview
+This guide will help you deploy the Blackletter Systems application on Render, including both the backend API and frontend.
 
-Your Blackletter Systems app is now ready for deployment to `https://blackletter.onrender.com/`
+## Prerequisites
+- A Render account
+- Your application code pushed to a Git repository (GitHub, GitLab, etc.)
 
-### ✅ What's Ready
+## Deployment Steps
 
-1. **Frontend**: Next.js app with comprehensive Blackletter dashboard
-2. **Build Configuration**: Static export enabled for Render
-3. **Deployment Files**: `render.yaml` configuration created
-4. **Build Success**: All TypeScript errors fixed, build passes
+### 1. Connect Your Repository
+1. Log in to [Render Dashboard](https://dashboard.render.com)
+2. Click "New +" and select "Blueprint"
+3. Connect your Git repository
+4. Render will automatically detect the `render.yaml` file
 
-### 📋 Deployment Steps
+### 2. Environment Variables Setup
+Before deploying, you'll need to set up the following environment variables in Render:
 
-#### Step 1: Push to GitHub
-```bash
-# If you haven't already, create a GitHub repository
-git remote add origin https://github.com/yourusername/blackletter-systems.git
-git push -u origin main
-```
+#### Backend Environment Variables
+- `OPENAI_API_KEY` - Your OpenAI API key
+- `GOOGLE_API_KEY` - Your Google API key (if using Gemini)
+- `PORT` - Will be set automatically by Render
 
-#### Step 2: Deploy to Render
+#### Frontend Environment Variables
+- `NEXT_PUBLIC_API_URL` - Will be set to `https://blackletter-backend.onrender.com`
+- `PORT` - Will be set automatically by Render
 
-1. **Go to [Render.com](https://render.com)**
-2. **Sign up/Login** with your GitHub account
-3. **Click "New +"** → **"Static Site"**
-4. **Connect Repository**:
-   - Select your `blackletter-systems` repository
-   - Branch: `main`
-   - Root Directory: `frontend`
+### 3. Deploy Using Blueprint
+1. Render will automatically create two services:
+   - **blackletter-backend**: Python FastAPI service
+   - **blackletter-frontend**: Next.js frontend service
 
-5. **Configure Build Settings**:
-   - **Build Command**: `npm install && npm run build`
-   - **Publish Directory**: `out`
-   - **Environment Variables**: None required for static site
+2. The deployment will use the configuration from `render.yaml`
 
-6. **Deploy**:
-   - Click "Create Static Site"
-   - Render will automatically build and deploy your app
+### 4. Manual Service Creation (Alternative)
+If you prefer to create services manually:
 
-### 🎯 Expected Result
+#### Backend Service
+- **Type**: Web Service
+- **Runtime**: Python 3.11
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- **Root Directory**: `backend`
 
-After deployment, your app will be available at:
-- **URL**: `https://blackletter.onrender.com/`
-- **Features**: Full Blackletter dashboard with:
-  - Contract management interface
-  - GDPR compliance center
-  - UK Legal Hub
-  - AI-powered contract analysis
-  - Modern dark theme UI
+#### Frontend Service
+- **Type**: Web Service
+- **Runtime**: Node.js 18.17.0
+- **Build Command**: `npm install && npm run build`
+- **Start Command**: `npm start`
+- **Root Directory**: `frontend`
 
-### 🔧 Configuration Files
+### 5. Post-Deployment Configuration
 
-#### `render.yaml` (Root)
-```yaml
-services:
-  - type: web
-    name: blackletter-frontend
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./out
-    envVars:
-      - key: NODE_VERSION
-        value: 18.17.0
-```
+#### Update Frontend API URL
+After the backend is deployed, update the frontend environment variable:
+- Go to your frontend service settings
+- Update `NEXT_PUBLIC_API_URL` to your actual backend URL
+- Redeploy the frontend service
 
-#### `frontend/next.config.js`
-```javascript
-const nextConfig = {
-  output: 'export',
-  trailingSlash: true,
-  images: {
-    unoptimized: true
-  }
-};
-```
+#### Verify CORS Settings
+The backend is configured to allow requests from:
+- `http://localhost:3000` (local development)
+- `https://blackletter-frontend.onrender.com`
+- `https://blackletter-systems.onrender.com`
 
-### 🚨 Troubleshooting
+## Service URLs
+After deployment, your services will be available at:
+- **Backend API**: `https://blackletter-backend.onrender.com`
+- **Frontend**: `https://blackletter-frontend.onrender.com`
 
-#### Build Fails
-- Check that all dependencies are in `package.json`
-- Ensure TypeScript compilation passes locally
-- Verify `next.config.js` is properly configured
+## Health Check
+You can verify the backend is working by visiting:
+`https://blackletter-backend.onrender.com/health`
 
-#### Site Not Loading
-- Check Render deployment logs
-- Verify the publish directory is `out`
-- Ensure static export is working
+## Troubleshooting
 
-#### Performance Issues
-- Enable Render's CDN for better global performance
-- Consider image optimization for better load times
+### Common Issues
 
-### 📊 Monitoring
+1. **Build Failures**
+   - Check the build logs in Render dashboard
+   - Ensure all dependencies are in `requirements.txt`
+   - Verify Python version compatibility
 
-Once deployed, you can monitor:
-- **Build Status**: In Render dashboard
-- **Performance**: Render provides analytics
-- **Uptime**: Automatic health checks
+2. **CORS Errors**
+   - Verify the frontend URL is in the backend CORS allowlist
+   - Check that `NEXT_PUBLIC_API_URL` is set correctly
 
-### 🔄 Updates
+3. **Environment Variables**
+   - Ensure all required API keys are set in Render
+   - Check that variable names match exactly
 
-To update your deployed app:
-1. Make changes to your code
-2. Commit and push to GitHub
-3. Render will automatically redeploy
+4. **Port Issues**
+   - Render automatically sets the `PORT` environment variable
+   - The application should use `$PORT` in the start command
 
-### 🎉 Success!
+### Logs and Monitoring
+- View logs in the Render dashboard for each service
+- Monitor service health and performance
+- Set up alerts for service downtime
 
-Your Blackletter Systems app will be live at `https://blackletter.onrender.com/` with:
-- ✅ Professional contract management interface
-- ✅ GDPR compliance tools
-- ✅ UK legal framework integration
-- ✅ Modern, responsive design
-- ✅ AI-powered analysis capabilities
+## Security Considerations
+- Never commit API keys to your repository
+- Use Render's environment variable system for sensitive data
+- Enable HTTPS (automatic on Render)
+- Consider setting up custom domains
 
----
+## Cost Optimization
+- Render offers a free tier for development
+- Monitor usage to avoid unexpected charges
+- Consider auto-sleep for development environments
 
-**Next Steps**: Consider setting up the backend API for full functionality, or start using the frontend for contract management workflows.
+## Support
+For Render-specific issues, refer to:
+- [Render Documentation](https://render.com/docs)
+- [Render Support](https://render.com/support)

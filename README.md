@@ -17,6 +17,18 @@ Simple, fast contract review using AI. Upload → Extract → Summarise → Show
 - **[Security Policy](SECURITY.md)** - Security measures and vulnerability reporting
 - **[Changelog](CHANGELOG.md)** - Version history and release notes
 
+### 🤖 AI Agent Resources
+
+- **[Agent Rules](AGENT_RULES.md)** - Mandatory rules for all AI agents working on this repository
+- **[Agent Quick Reference](AGENT_QUICK_REFERENCE.md)** - Quick start guide for AI agents
+- **[Repository To-Do List](TODO.md)** - Comprehensive running to-do list and roadmap
+
+### 🤖 AI Agent Resources
+
+- **[Agent Rules](AGENT_RULES.md)** - Mandatory rules for all AI agents working on this repository
+- **[Agent Quick Reference](AGENT_QUICK_REFERENCE.md)** - Quick start guide for AI agents
+- **[Repository To-Do List](TODO.md)** - Comprehensive running to-do list and roadmap
+
 ## 🚀 Quick Start
 
 ### Prerequisites
