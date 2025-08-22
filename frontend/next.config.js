@@ -2,6 +2,8 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
+  basePath: '/app',
+  assetPrefix: '/app/',
   images: {
     unoptimized: true
   },
@@ -11,5 +13,4 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
 };
-
 module.exports = nextConfig;
