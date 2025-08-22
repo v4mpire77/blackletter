@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "jurisdiction": ["UK", "EU"],
+  "meta": {
+    "purpose": "GDPR vendor contract compliance",
+    "scoring": {
+      "weights": {"critical": 4, "high": 3, "medium": 2, "low": 1},
+      "pass_threshold": 0.7
+    }
+  },
+  "rules": [
+    {
+      "id": "R01",
+      "name": "Data Processing Lawful Basis",
+      "article": "GDPR Article 6",
+      "severity": "critical",
+      "description": "Contract must specify lawful basis for personal data processing",
+      "required": true,
+      "checks": [
+        {
+          "type": "regex_any",
+          "field": "full_text",
+          "patterns": [
+            "lawful basis",
+            "Article 6\\(1\\)\\([a-f]\\)",
+            "legitimate interest",
+            "contractual necessity",
+            "consent.*processing"
+          ]
+        }
+      ],
+      "messages": {
+        "fail": "No clear lawful basis for data processing identified",
+        "warn": "Lawful basis mentioned but may need clarification"
+      },
+      "remediation": "Add clause: 'Data processing is necessary for performance of this contract pursuant to GDPR Article 6(1)(b)'"
+    }
+  ]
+}
