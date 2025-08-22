@@ -1,147 +1,280 @@
 from fastapi import APIRouter, UploadFile, HTTPException
-from pypdf import PdfReader
-from io import BytesIO
-import json
-import re
-import json
+from typing import List, Dict, Any
+import uuid
+from datetime import datetime
+
 from ..app.core.llm_adapter import LLMAdapter
-from ..models.schemas import ReviewResult
+from ..app.core.ocr import OCRProcessor
+from ..app.services.vague_detector import VagueTermsDetector
+from ..app.services.rag_store import rag_store
+from ..app.services.gemini_judge import gemini_judge
+from ..models.schemas import ReviewResult, Issue, IssueType, Severity, UploadResponse, AnalysisResult, AnalysisProgress
 
 router = APIRouter()
 
-# LLM Prompt templates (from COPILOT_INSTRUCTIONS)
-SYSTEM_PROMPT = (
-    "You are a UK legal assistant helping with quick, non-binding contract triage. Be concise."
-)
-USER_PROMPT = (
-    "Return ONLY valid JSON (no commentary, no code fences, no explanation).\n"
-    "Output a single JSON object with keys: summary (string), risks (array of strings).\n"
-    "If information is missing, still return an object but note missing sections as empty or an explanatory string.\n"
-    "Text: {text}"
-)
+# Initialize services
+llm_adapter = LLMAdapter()
+ocr_processor = OCRProcessor()
+vague_detector = VagueTermsDetector()
 
-# Adapter (async interface in app.core.llm_adapter)
-llm = LLMAdapter()
-
+# In-memory storage for upload tracking (use database in production)
+upload_storage = {}
+analysis_storage = {}
 
 @router.post("/review", response_model=ReviewResult)
 async def review_contract(file: UploadFile):
-    # Validate file type
-    if file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are accepted")
-
+    """Review contract for vague terms and compliance issues."""
+    
     try:
+        # Validate file
+        if not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="Only PDF files supported")
+        
         # Read file content
         content = await file.read()
-        if len(content) > 10 * 1024 * 1024:  # 10MB
+        if len(content) > 10 * 1024 * 1024:  # 10MB limit
             raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-
-        # Extract text from PDF
-        pdf = PdfReader(BytesIO(content))
-        text_parts = []
-        for page in pdf.pages:
-            t = page.extract_text() or ""
-            text_parts.append(t)
-        text = "\n\n".join(text_parts).strip()
-
-        if not text:
-            raise HTTPException(status_code=400, detail="No extractable text found in PDF")
-
-        # Truncate text to safe length for LLM
-        truncated = text[:6000] + ("..." if len(text) > 6000 else "")
-
-        # Call the adapter's analyze_contract (async)
-        resp = await llm.analyze_contract(truncated)
-
-        # Normalise response to text or dict
-        if isinstance(resp, dict):
-            parsed = resp
-            summary = parsed.get("summary") or parsed.get("summary_text") or ""
-            risks = parsed.get("risks") or parsed.get("issues") or []
-            if isinstance(risks, str):
-                risks = [risks]
-        else:
-            resp_text = str(resp)
-            # 1) Try direct JSON
-            parsed = None
-            try:
-                parsed = json.loads(resp_text)
-            except Exception:
-                parsed = None
-
-            # 2) If not, try to extract JSON inside triple-backtick fences ```{...}```
-            if parsed is None:
-                m = re.search(r'```\s*({[\s\S]*?})\s*```', resp_text)
-                if m:
-                    try:
-                        parsed = json.loads(m.group(1))
-                    except Exception:
-                        parsed = None
-
-            # 3) If still not, try any {...} blocks (prefer the longest candidate)
-            if parsed is None:
-                candidates = re.findall(r'({[\s\S]*})', resp_text)
-                candidates.sort(key=len, reverse=True)
-                for cand in candidates:
-                    try:
-                        parsed = json.loads(cand)
-                        break
-                    except Exception:
-                        # Try unescaping common backslash-escaped sequences
-                        try:
-                            unescaped = bytes(cand, "utf-8").decode("unicode_escape")
-                            parsed = json.loads(unescaped)
-                            break
-                        except Exception:
-                            # Try trimming surrounding quotes if present
-                            try:
-                                trimmed = cand.strip('"\'')
-                                parsed = json.loads(trimmed)
-                                break
-                            except Exception:
-                                parsed = None
-
-            # 4) Final fallback: naive human-readable parsing
-            if parsed is not None:
-                summary = parsed.get("summary") or parsed.get("summary_text") or ""
-                risks = parsed.get("risks") or parsed.get("issues") or []
-                if isinstance(risks, str):
-                    risks = [risks]
-                # Coerce risk items to strings (handle dicts returned by some LLMs)
-                coerced = []
-                for r in risks:
-                    if isinstance(r, str):
-                        coerced.append(r)
-                    elif isinstance(r, dict):
-                        text = r.get("text") or r.get("description") or r.get("value")
-                        if isinstance(text, str) and text:
-                            coerced.append(text)
-                        else:
-                            try:
-                                coerced.append(json.dumps(r))
-                            except Exception:
-                                coerced.append(str(r))
-                    else:
-                        coerced.append(str(r))
-                risks = coerced
-            else:
-                # Fallback: naive split
-                parts = [p.strip() for p in resp_text.split("\n\n") if p.strip()]
-                summary = parts[0] if parts else ""
-                risks = []
-                for p in parts[1:]:
-                    for line in p.splitlines():
-                        line = line.strip()
-                        if not line:
-                            continue
-                        if line.startswith("-") or line.startswith("*"):
-                            risks.append(line.lstrip("-* "))
-                        else:
-                            risks.append(line)
-
-        return ReviewResult(summary=summary or "", risks=risks)
-
-    except HTTPException:
-        raise
+        
+        # Generate document ID
+        doc_id = str(uuid.uuid4())
+        
+        # Extract text using OCR
+        extracted_text = await ocr_processor.extract_text(content)
+        
+        # Store in RAG store
+        rag_store.store_document(doc_id, extracted_text, {
+            "filename": file.filename,
+            "size": len(content),
+            "upload_time": datetime.utcnow().isoformat()
+        })
+        
+        # Find vague terms
+        vague_hits = vague_detector.find_vague_spans(extracted_text)
+        
+        # Process each vague term with LLM judgment
+        findings = []
+        for hit in vague_hits:
+            # Get context around the vague term
+            context = rag_store.get_context_around_position(
+                doc_id, hit["start"], window_size=1200
+            )
+            
+            # Create citations
+            citations = [{
+                "doc_id": file.filename,
+                "page": context["page"],
+                "start": hit["start"],
+                "end": hit["end"]
+            }]
+            
+            # Get LLM judgment
+            judgment = await gemini_judge.judge_vague_term(hit, context["context"], citations)
+            
+            # Convert to Issue format
+            issue = Issue(
+                id=str(uuid.uuid4()),
+                type=IssueType.OTHER,  # Could map categories to specific types
+                title=f"Vague {hit['category']} term: {hit['text']}",
+                description=judgment["rationale"],
+                severity=self._map_risk_to_severity(judgment["risk"]),
+                clause=f"Page {context['page']}",
+                page_number=context["page"],
+                remediation="\n".join(judgment["improvements"]),
+                timestamp=datetime.utcnow()
+            )
+            
+            findings.append({
+                "issue": issue,
+                "vague_term": hit,
+                "judgment": judgment,
+                "context": context,
+                "citations": citations
+            })
+        
+        # Convert findings to issues
+        issues = [finding["issue"] for finding in findings]
+        
+        return ReviewResult(
+            filename=file.filename,
+            size=len(content),
+            issues=issues,
+            metadata={
+                "doc_id": doc_id,
+                "vague_terms_found": len(vague_hits),
+                "findings": findings
+            }
+        )
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Processing failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Error analyzing document: {str(e)}")
+
+def _map_risk_to_severity(risk: str) -> Severity:
+    """Map LLM risk levels to severity enum."""
+    mapping = {
+        "low": Severity.LOW,
+        "medium": Severity.MEDIUM,
+        "high": Severity.HIGH
+    }
+    return mapping.get(risk, Severity.MEDIUM)
+
+@router.post("/upload", response_model=UploadResponse)
+async def upload_document(file: UploadFile):
+    """Upload a document for later analysis."""
+    
+    try:
+        # Validate file
+        if not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="Only PDF files supported")
+        
+        # Read file content
+        content = await file.read()
+        if len(content) > 10 * 1024 * 1024:  # 10MB limit
+            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+        
+        # Generate document ID
+        doc_id = str(uuid.uuid4())
+        
+        # Store upload info
+        upload_info = {
+            "doc_id": doc_id,
+            "filename": file.filename,
+            "size": len(content),
+            "content": content,
+            "upload_time": datetime.utcnow().isoformat(),
+            "status": "uploaded"
+        }
+        upload_storage[doc_id] = upload_info
+        
+        return UploadResponse(
+            doc_id=doc_id,
+            filename=file.filename,
+            size=len(content),
+            upload_time=upload_info["upload_time"]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@router.post("/analyze/{doc_id}", response_model=AnalysisResult)
+async def analyze_document(doc_id: str):
+    """Analyze a previously uploaded document."""
+    
+    try:
+        # Check if document exists
+        if doc_id not in upload_storage:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        upload_info = upload_storage[doc_id]
+        content = upload_info["content"]
+        
+        # Extract text using OCR
+        extracted_text = await ocr_processor.extract_text(content)
+        
+        # Store in RAG store
+        rag_store.store_document(doc_id, extracted_text, {
+            "filename": upload_info["filename"],
+            "size": upload_info["size"],
+            "upload_time": upload_info["upload_time"]
+        })
+        
+        # Find vague terms
+        vague_hits = vague_detector.find_vague_spans(extracted_text)
+        
+        # Process each vague term with LLM judgment
+        findings = []
+        issues = []
+        
+        for hit in vague_hits:
+            # Get context around the vague term
+            context = rag_store.get_context_around_position(
+                doc_id, hit["start"], window_size=1200
+            )
+            
+            # Create citations
+            citations = [{
+                "doc_id": upload_info["filename"],
+                "page": context["page"],
+                "start": hit["start"],
+                "end": hit["end"]
+            }]
+            
+            # Get LLM judgment
+            judgment = await gemini_judge.judge_vague_term(hit, context["context"], citations)
+            
+            # Convert to Issue format
+            issue = Issue(
+                id=str(uuid.uuid4()),
+                docId=doc_id,
+                docName=upload_info["filename"],
+                type=IssueType.OTHER,  # Could map categories to specific types
+                clausePath=f"Page {context['page']}",
+                citation="Vague Terms Analysis",
+                severity=_map_risk_to_severity(judgment["risk"]),
+                confidence=0.85,
+                status="Open",
+                snippet=hit['text'],
+                recommendation="\n".join(judgment["improvements"]),
+                createdAt=datetime.utcnow().isoformat()
+            )
+            
+            issues.append(issue)
+            findings.append({
+                "issue": issue,
+                "vague_term": hit,
+                "judgment": judgment,
+                "context": context,
+                "citations": citations
+            })
+        
+        # Generate summary and risks
+        summary = f"Analyzed {upload_info['filename']} and found {len(vague_hits)} vague terms requiring attention."
+        risks = [f"Vague {hit['category']} term: {hit['text']}" for hit in vague_hits[:5]]  # Top 5 risks
+        
+        # Store analysis results
+        analysis_result = AnalysisResult(
+            doc_id=doc_id,
+            filename=upload_info["filename"],
+            issues=issues,
+            summary=summary,
+            risks=risks,
+            metadata={
+                "vague_terms_found": len(vague_hits),
+                "findings": findings
+            }
+        )
+        
+        analysis_storage[doc_id] = analysis_result
+        
+        return analysis_result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+@router.get("/analyze/{doc_id}/status", response_model=AnalysisProgress)
+async def get_analysis_status(doc_id: str):
+    """Get the status of document analysis."""
+    
+    if doc_id not in upload_storage:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    if doc_id in analysis_storage:
+        return AnalysisProgress(
+            doc_id=doc_id,
+            status="completed",
+            progress=1.0,
+            message="Analysis completed successfully"
+        )
+    else:
+        return AnalysisProgress(
+            doc_id=doc_id,
+            status="pending",
+            progress=0.0,
+            message="Analysis not started"
+        )
+
+@router.get("/contracts/{doc_id}/findings")
+async def get_findings(doc_id: str):
+    """Get detailed findings for a specific document."""
+    if doc_id in analysis_storage:
+        return analysis_storage[doc_id]
+    return {"doc_id": doc_id, "findings": []}

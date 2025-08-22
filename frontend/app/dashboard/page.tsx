@@ -115,9 +115,10 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<"All" | "Open" | "In Review" | "Resolved">("All");
   const [gdprFocus, setGdprFocus] = useState(false);
   const [hideResolved, setHideResolved] = useState(false);
-  const [issues, setIssues] = useState<Issue[]>(mockIssues);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Check API health
+  // Check API health and fetch issues
   useEffect(() => {
     const checkHealth = async () => {
       try {
@@ -132,9 +133,34 @@ export default function Dashboard() {
       }
     };
 
+    const fetchIssues = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/issues');
+        if (response.ok) {
+          const data = await response.json();
+          setIssues(data);
+        } else {
+          console.error('Failed to fetch issues');
+          setIssues(mockIssues); // Fallback to mock data
+        }
+      } catch (error) {
+        console.error('Error fetching issues:', error);
+        setIssues(mockIssues); // Fallback to mock data
+      } finally {
+        setLoading(false);
+      }
+    };
+
     checkHealth();
-    const interval = setInterval(checkHealth, 30000);
-    return () => clearInterval(interval);
+    fetchIssues();
+    
+    const healthInterval = setInterval(checkHealth, 30000);
+    const issuesInterval = setInterval(fetchIssues, 60000); // Refresh issues every minute
+    
+    return () => {
+      clearInterval(healthInterval);
+      clearInterval(issuesInterval);
+    };
   }, []);
 
   // Filter issues
@@ -396,10 +422,16 @@ export default function Dashboard() {
                   <Gavel className="h-4 w-4" /> Open Issues
                 </CardTitle>
                 <div className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Showing {filteredIssues.length} of {issues.length} issues
+                  {loading ? 'Loading...' : `Showing ${filteredIssues.length} of ${issues.length} issues`}
                 </div>
               </CardHeader>
               <CardContent>
+                {loading ? (
+                  <div className="py-8 text-center text-neutral-500 dark:text-neutral-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                    <p>Loading issues...</p>
+                  </div>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>

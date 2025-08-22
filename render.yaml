@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: blackletter-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./out
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0

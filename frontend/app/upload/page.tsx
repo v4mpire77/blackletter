@@ -24,6 +24,9 @@ export default function UploadPage() {
     }
   }
 
+  const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'analyzing' | 'complete'>('idle');
+  const [progressMessage, setProgressMessage] = useState<string>('');
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
@@ -31,24 +34,54 @@ export default function UploadPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setUploadProgress('uploading');
+    setProgressMessage('Uploading document...');
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/review`, {
+      // Step 1: Upload the file
+      const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/upload`, {
         method: 'POST',
         body: formData,
       });
 
-      if (!res.ok) {
-        throw new Error(await res.text());
+      if (!uploadRes.ok) {
+        throw new Error(await uploadRes.text());
       }
 
-      const data = await res.json();
-      setResult(data);
+      const { doc_id } = await uploadRes.json();
+      
+      setUploadProgress('analyzing');
+      setProgressMessage('Analyzing document for vague terms...');
+
+      // Step 2: Start analysis
+      const analysisRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/analyze/${doc_id}`, {
+        method: 'POST'
+      });
+
+      if (!analysisRes.ok) {
+        throw new Error(await analysisRes.text());
+      }
+
+      const analysisData = await analysisRes.json();
+      
+      // Convert to the expected format for the existing UI
+      const resultData = {
+        summary: analysisData.summary,
+        risks: analysisData.risks,
+        issues: analysisData.issues,
+        metadata: analysisData.metadata
+      };
+      
+      setResult(resultData);
+      setUploadProgress('complete');
+      setProgressMessage('Analysis complete!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
+      setUploadProgress('idle');
+      setProgressMessage('');
     } finally {
       setLoading(false);
     }
@@ -139,6 +172,7 @@ export default function UploadPage() {
                   <button
                     type="button"
                     onClick={() => setFile(null)}
+                    title="Remove file"
                     className="text-gray-400 hover:text-gray-300"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
@@ -161,7 +195,7 @@ export default function UploadPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Processing...
+                    {progressMessage || 'Processing...'}
                   </>
                 ) : (
                   <>
@@ -174,6 +208,30 @@ export default function UploadPage() {
               </button>
             </div>
           </form>
+
+          {loading && (
+            <div className="mx-4 mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="flex items-center gap-3">
+                <svg className="animate-spin h-4 w-4 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <div className="flex-1">
+                  <div className="text-sm text-blue-400 font-medium">{progressMessage}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`w-2 h-2 rounded-full ${uploadProgress === 'uploading' || uploadProgress === 'analyzing' || uploadProgress === 'complete' ? 'bg-blue-400' : 'bg-gray-600'}`} />
+                    <div className="text-xs text-gray-400">Upload</div>
+                    <div className="w-4 h-px bg-gray-600" />
+                    <div className={`w-2 h-2 rounded-full ${uploadProgress === 'analyzing' || uploadProgress === 'complete' ? 'bg-blue-400' : 'bg-gray-600'}`} />
+                    <div className="text-xs text-gray-400">Analyze</div>
+                    <div className="w-4 h-px bg-gray-600" />
+                    <div className={`w-2 h-2 rounded-full ${uploadProgress === 'complete' ? 'bg-green-400' : 'bg-gray-600'}`} />
+                    <div className="text-xs text-gray-400">Complete</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="mx-8 mb-8 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">

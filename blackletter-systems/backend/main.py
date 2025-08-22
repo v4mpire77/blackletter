@@ -9,6 +9,13 @@ from datetime import datetime
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
+# Try to import enhanced OCR, fallback to simulation
+try:
+    from app.core.ocr_enhanced import perform_ocr as perform_enhanced_ocr
+    HAS_ENHANCED_OCR = True
+except ImportError:
+    HAS_ENHANCED_OCR = False
+
 app = FastAPI(title="Blackletter API", 
               description="API for contract analysis and compliance checking",
               version="0.1.0")
@@ -56,8 +63,20 @@ class AnalysisResponse(BaseModel):
     size: int
     issues: List[Issue]
 
-# Simulated OCR function
+# OCR function - uses enhanced OCR if available, otherwise simulation
 def perform_ocr(file_bytes: bytes, filename: Optional[str] = None) -> str:
+    """
+    Extract text from a document using OCR.
+    Uses enhanced pytesseract-based OCR if dependencies are available,
+    otherwise falls back to simulation.
+    """
+    if HAS_ENHANCED_OCR:
+        try:
+            return perform_enhanced_ocr(file_bytes, filename)
+        except Exception as e:
+            print(f"Enhanced OCR failed, falling back to simulation: {e}")
+    
+    # Fallback simulation
     basic_text = (
         "EMPLOYMENT CONTRACT\n\n"
         "THIS EMPLOYMENT AGREEMENT (the 'Agreement') is made and entered into on [DATE], "
@@ -188,6 +207,28 @@ def analyze_contract_with_llm(contract_text: str, filename: Optional[str] = None
         ))
     
     return issues
+
+@app.get("/ocr-status")
+def ocr_status():
+    """Check OCR capabilities and Tesseract installation status."""
+    status: Dict[str, Any] = {
+        "enhanced_ocr_available": HAS_ENHANCED_OCR,
+        "dependencies_installed": HAS_ENHANCED_OCR,
+        "tesseract_configured": False
+    }
+    
+    if HAS_ENHANCED_OCR:
+        try:
+            # Test if we can import the enhanced OCR
+            from app.core.ocr_enhanced import OCRProcessor
+            status["tesseract_configured"] = True
+            status["message"] = "Enhanced OCR dependencies are available"
+        except Exception as e:
+            status["tesseract_error"] = str(e)
+    else:
+        status["message"] = "Using simulated OCR (enhanced OCR dependencies not installed)"
+    
+    return status
 
 @app.get("/health")
 def health():

@@ -4,9 +4,8 @@ from datetime import datetime
 import uuid
 from pypdf import PdfReader
 from io import BytesIO
-import json
 
-from ..models.schemas import Issue
+from ..models.schemas import Issue, IssueType, Severity
 
 router = APIRouter()
 
@@ -21,9 +20,9 @@ MOCK_ISSUES = [
         docId="DOC-ACME-MSA",
         docName="ACME × Blackletter — Master Services Agreement (v3)",
         clausePath="5.2 → Data Protection → International Transfers",
-        type="GDPR",
+        type=IssueType.GDPR,
         citation="UK GDPR Art. 44–49; DPA 2018 Part 2",
-        severity="High",
+        severity=Severity.HIGH,
         confidence=0.91,
         status="Open",
         snippet="Supplier may transfer Customer Personal Data outside the UK without additional safeguards.",
@@ -35,9 +34,9 @@ MOCK_ISSUES = [
         docId="DOC-ACME-MSA",
         docName="ACME × Blackletter — Master Services Agreement (v3)",
         clausePath="5.5 → Data Protection → Subprocessors",
-        type="GDPR",
+        type=IssueType.GDPR,
         citation="UK GDPR Art. 28(2)-(4)",
-        severity="Medium",
+        severity=Severity.MEDIUM,
         confidence=0.84,
         status="In Review",
         owner="Omar",
@@ -50,9 +49,9 @@ MOCK_ISSUES = [
         docId="DOC-GAD-PA",
         docName="Government Agency — Processing Addendum",
         clausePath="2.3 → Confidentiality",
-        type="Case Law",
+        type=IssueType.CASE_LAW,
         citation="Barclays Bank plc v Various Claimants [2020] UKSC 13 (vicarious liability scope)",
-        severity="Low",
+        severity=Severity.LOW,
         confidence=0.73,
         status="Open",
         snippet="The clause attempts to disclaim all liability for acts of employees and contractors.",
@@ -99,9 +98,9 @@ async def analyze_contract(file: UploadFile):
             docId=f"DOC-{filename.replace('.pdf', '').replace(' ', '-').upper()}",
             docName=filename,
             clausePath="3.2 → Data Protection → Breach Notification",
-            type="GDPR",
+            type=IssueType.GDPR,
             citation="UK GDPR Art. 33; DPA 2018 s.67",
-            severity="High",
+            severity=Severity.HIGH,
             confidence=0.89,
             status="Open",
             snippet="No clear obligation to notify the ICO within 72 hours of becoming aware of a personal data breach.",
