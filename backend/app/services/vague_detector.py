@@ -1,14 +1,12 @@
-import re
-from typing import List, Dict, Any, Tuple
-from dataclasses import dataclass
+"""
+Vague Terms Detector Service
 
-@dataclass
-class VagueTerm:
-    pattern: str
-    category: str
-    severity: str
-    description: str
-    suggested_fix: str
+Detects ambiguous language in contracts using regex patterns.
+"""
+import re
+import json
+from typing import List, Dict, Tuple, Optional
+from pathlib import Path
 
 class VagueTermsDetector:
     def __init__(self, rules_path: Optional[str] = None):

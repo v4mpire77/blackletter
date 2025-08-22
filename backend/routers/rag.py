@@ -3,7 +3,8 @@ RAG Router
 
 Handles RAG-specific endpoints for document storage, retrieval, and semantic search.
 """
-from fastapi import APIRouter, HTTPException, UploadFile, Form
+from fastapi import APIRouter, HTTPException, UploadFile, Form, Depends
+import logging
 from typing import List, Dict, Any, Optional
 import uuid
 from datetime import datetime
@@ -11,9 +12,11 @@ from datetime import datetime
 from ..app.core.llm_adapter import LLMAdapter
 from ..app.core.ocr import OCRProcessor
 from ..app.services.rag_store import rag_store
+from ..app.core.auth import verify_supabase_jwt
 from ..models.schemas import UploadResponse, AnalysisProgress
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Initialize services
 llm_adapter = LLMAdapter()
@@ -23,7 +26,7 @@ ocr_processor = OCRProcessor()
 upload_storage = {}
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_document(file: UploadFile):
+async def upload_document(file: UploadFile, user=Depends(verify_supabase_jwt)):
     """
     Upload and process a document for RAG storage.
     
@@ -34,6 +37,7 @@ async def upload_document(file: UploadFile):
     4. Returns document metadata
     """
     try:
+        logger.info("RAG upload requested by user_id=%s filename=%s size=%s", user.get("sub"), file.filename, getattr(file, 'size', 'n/a'))
         # Validate file
         if not file.filename.lower().endswith(('.pdf', '.txt', '.docx')):
             raise HTTPException(status_code=400, detail="Only PDF, TXT, and DOCX files supported")
@@ -75,6 +79,7 @@ async def upload_document(file: UploadFile):
             "metadata": metadata
         }
         
+        logger.info("RAG upload completed: user_id=%s doc_id=%s chunks=%s", user.get("sub"), doc_id, len(chunks))
         return UploadResponse(
             doc_id=doc_id,
             filename=file.filename,
@@ -83,6 +88,7 @@ async def upload_document(file: UploadFile):
         )
         
     except Exception as e:
+        logger.error("RAG upload failed: user_id=%s filename=%s error=%s", user.get("sub") if isinstance(user, dict) else None, getattr(file, 'filename', None), str(e))
         raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
 
 @router.post("/query")

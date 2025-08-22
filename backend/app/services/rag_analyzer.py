@@ -2,72 +2,214 @@
 RAG Analyzer Service
 
 Integrates RAG capabilities with contract analysis for enhanced legal document processing.
+Following Context Engineering Framework standards for consistency, quality, and maintainability.
 """
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union
 from datetime import datetime
 import uuid
+import logging
+import asyncio
+from contextlib import asynccontextmanager
 
 from ..core.llm_adapter import LLMAdapter
 from .rag_store import rag_store, TextChunk
 from .vague_detector import VagueTermsDetector
 from .gemini_judge import gemini_judge
 
+# Configure logging following framework standards
+logger = logging.getLogger(__name__)
+
+class RAGAnalysisError(Exception):
+    """Custom exception for RAG analysis errors."""
+    pass
+
+class RAGAnalysisResult:
+    """
+    Structured result class for RAG analysis operations.
+    Ensures consistent response format across the application.
+    """
+    def __init__(
+        self,
+        doc_id: str,
+        success: bool = True,
+        basic_analysis: Optional[Dict[str, Any]] = None,
+        rag_insights: Optional[Dict[str, Any]] = None,
+        compliance_analysis: Optional[Dict[str, Any]] = None,
+        risk_assessment: Optional[Dict[str, Any]] = None,
+        vague_terms_found: int = 0,
+        chunks_created: int = 0,
+        error_message: Optional[str] = None,
+        processing_time_ms: Optional[float] = None
+    ):
+        self.doc_id = doc_id
+        self.success = success
+        self.basic_analysis = basic_analysis or {}
+        self.rag_insights = rag_insights or {}
+        self.compliance_analysis = compliance_analysis or {}
+        self.risk_assessment = risk_assessment or {}
+        self.vague_terms_found = vague_terms_found
+        self.chunks_created = chunks_created
+        self.error_message = error_message
+        self.processing_time_ms = processing_time_ms
+        self.analysis_timestamp = datetime.utcnow().isoformat()
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert result to dictionary format."""
+        result = {
+            "doc_id": self.doc_id,
+            "success": self.success,
+            "analysis_timestamp": self.analysis_timestamp,
+            "vague_terms_found": self.vague_terms_found,
+            "chunks_created": self.chunks_created
+        }
+        
+        if self.success:
+            result.update({
+                "basic_analysis": self.basic_analysis,
+                "rag_insights": self.rag_insights,
+                "compliance_analysis": self.compliance_analysis,
+                "risk_assessment": self.risk_assessment
+            })
+        else:
+            result["error"] = self.error_message
+            
+        if self.processing_time_ms:
+            result["processing_time_ms"] = self.processing_time_ms
+            
+        return result
+
 class RAGAnalyzer:
-    """Enhanced contract analyzer using RAG capabilities."""
+    """
+    Enhanced contract analyzer using RAG capabilities.
     
-    def __init__(self):
-        self.llm_adapter = LLMAdapter()
-        self.vague_detector = VagueTermsDetector()
+    Integrates RAG capabilities with contract analysis for enhanced legal document processing.
+    Following Context Engineering Framework standards for consistency, quality, and maintainability.
     
-    async def analyze_contract_with_rag(self, doc_id: str, text: str, 
-                                      metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+    Attributes:
+        llm_adapter: LLM adapter for AI processing
+        vague_detector: Vague terms detection service
+        
+    Performance Targets:
+        - Analysis completion: < 30 seconds for typical documents
+        - Query response time: < 2 seconds
+        - Error rate: < 1% for valid inputs
+    """
+    
+    def __init__(self) -> None:
+        """Initialize RAG analyzer with required services."""
+        try:
+            self.llm_adapter = LLMAdapter()
+            self.vague_detector = VagueTermsDetector()
+            logger.info("RAGAnalyzer initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize RAGAnalyzer: {str(e)}")
+            raise RAGAnalysisError(f"Initialization failed: {str(e)}") from e
+    
+    async def analyze_contract_with_rag(
+        self, 
+        doc_id: str, 
+        text: str, 
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> RAGAnalysisResult:
         """
         Perform comprehensive contract analysis using RAG.
         
+        This method provides enhanced contract analysis by combining traditional NLP
+        techniques with RAG capabilities for deeper insights and context awareness.
+        
         Args:
-            doc_id: Document identifier
-            text: Contract text
-            metadata: Document metadata
+            doc_id: Unique document identifier
+            text: Contract text content
+            metadata: Optional document metadata
             
         Returns:
-            Analysis results with RAG-enhanced insights
+            RAGAnalysisResult: Structured analysis results
+            
+        Raises:
+            RAGAnalysisError: When analysis fails due to critical errors
+            
+        Performance:
+            Target: < 30 seconds for documents up to 50 pages
+            Timeout: 120 seconds maximum
         """
+        start_time = datetime.utcnow()
+        
+        # Input validation
+        if not doc_id or not doc_id.strip():
+            raise RAGAnalysisError("Document ID is required")
+        
+        if not text or not text.strip():
+            raise RAGAnalysisError("Document text is required")
+        
+        logger.info(f"Starting RAG analysis for document {doc_id}")
+        
         try:
+            # Initialize metadata
+            metadata = metadata or {}
+            
             # Store document in RAG store
+            logger.debug(f"Storing document {doc_id} in RAG store")
             chunks = await rag_store.store_document(doc_id, text, metadata)
+            logger.info(f"Created {len(chunks)} chunks for document {doc_id}")
             
             # Perform basic contract analysis
+            logger.debug(f"Performing basic contract analysis for {doc_id}")
             basic_analysis = await self.llm_adapter.analyze_contract(text)
             
             # Find vague terms
+            logger.debug(f"Detecting vague terms in document {doc_id}")
             vague_hits = self.vague_detector.find_vague_spans(text)
+            logger.info(f"Found {len(vague_hits)} vague terms in document {doc_id}")
             
             # Enhanced analysis using RAG
+            logger.debug(f"Generating RAG insights for document {doc_id}")
             rag_insights = await self._generate_rag_insights(doc_id, text, vague_hits)
             
             # Generate compliance analysis
+            logger.debug(f"Performing compliance analysis for document {doc_id}")
             compliance_analysis = await self._analyze_compliance(doc_id, text)
             
             # Generate risk assessment
+            logger.debug(f"Performing risk assessment for document {doc_id}")
             risk_assessment = await self._assess_risks(doc_id, text)
             
-            return {
-                "doc_id": doc_id,
-                "basic_analysis": basic_analysis,
-                "rag_insights": rag_insights,
-                "compliance_analysis": compliance_analysis,
-                "risk_assessment": risk_assessment,
-                "vague_terms_found": len(vague_hits),
-                "chunks_created": len(chunks),
-                "analysis_timestamp": datetime.utcnow().isoformat()
-            }
+            # Calculate processing time
+            end_time = datetime.utcnow()
+            processing_time_ms = (end_time - start_time).total_seconds() * 1000
             
+            logger.info(
+                f"RAG analysis completed for document {doc_id} in {processing_time_ms:.2f}ms"
+            )
+            
+            return RAGAnalysisResult(
+                doc_id=doc_id,
+                success=True,
+                basic_analysis=basic_analysis,
+                rag_insights=rag_insights,
+                compliance_analysis=compliance_analysis,
+                risk_assessment=risk_assessment,
+                vague_terms_found=len(vague_hits),
+                chunks_created=len(chunks),
+                processing_time_ms=processing_time_ms
+            )
+            
+        except RAGAnalysisError:
+            # Re-raise custom errors
+            raise
         except Exception as e:
-            return {
-                "doc_id": doc_id,
-                "error": str(e),
-                "analysis_timestamp": datetime.utcnow().isoformat()
-            }
+            # Calculate processing time even for errors
+            end_time = datetime.utcnow()
+            processing_time_ms = (end_time - start_time).total_seconds() * 1000
+            
+            error_msg = f"Analysis failed for document {doc_id}: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            
+            return RAGAnalysisResult(
+                doc_id=doc_id,
+                success=False,
+                error_message=str(e),
+                processing_time_ms=processing_time_ms
+            )
     
     async def _generate_rag_insights(self, doc_id: str, text: str, 
                                    vague_hits: List[Dict[str, Any]]) -> Dict[str, Any]:

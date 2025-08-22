@@ -1,40 +1,27 @@
-<<<<<<< HEAD
-from typing import List, Optional, Literal
-from pydantic import BaseModel
+from __future__ import annotations
+from pydantic import BaseModel, Field
+from typing import List, Optional, Literal, Dict, Any
 from enum import Enum
+from datetime import datetime
 
-class IssueType(str, Enum):
+# Type definitions
+Severity = Literal["High", "Medium", "Low"]
+IssueType = Literal["GDPR", "Statute", "Case Law", "Other"]
+IssueStatus = Literal["Open", "In Review", "Resolved"]
+
+# Legacy enum classes for backward compatibility
+class SeverityEnum(str, Enum):
+    LOW = "Low"
+    MEDIUM = "Medium" 
+    HIGH = "High"
+
+class IssueTypeEnum(str, Enum):
     GDPR = "GDPR"
     STATUTE = "Statute"
     CASE_LAW = "Case Law"
     OTHER = "Other"
 
-class Severity(str, Enum):
-    LOW = "Low"
-    MEDIUM = "Medium"
-    HIGH = "High"
-
-class UploadResponse(BaseModel):
-    doc_id: str
-    filename: str
-    size: int
-    upload_time: str
-
-class AnalysisProgress(BaseModel):
-    doc_id: str
-    status: Literal["pending", "processing", "completed", "failed"]
-    progress: float  # 0.0 to 1.0
-    message: Optional[str] = None
-=======
-from __future__ import annotations
-from pydantic import BaseModel, Field
-from typing import List, Optional, Literal, Dict, Any
->>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
-
-Severity = Literal["High", "Medium", "Low"]
-IssueType = Literal["GDPR", "Statute", "Case Law"]
-IssueStatus = Literal["Open", "In Review", "Resolved"]
-
+# Core data models
 class Issue(BaseModel):
     id: str
     docId: str
@@ -43,27 +30,38 @@ class Issue(BaseModel):
     type: IssueType
     citation: str
     severity: Severity
-<<<<<<< HEAD
-    confidence: float
-    status: Literal["Open", "In Review", "Resolved"]
-=======
     confidence: float = Field(ge=0, le=1)
     status: IssueStatus = "Open"
->>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
     owner: Optional[str] = None
     snippet: str
     recommendation: str
     createdAt: str
 
-<<<<<<< HEAD
+class UploadResponse(BaseModel):
+    filename: str
+    size: int
+    doc_id: str
+    upload_time: Optional[str] = None
+
+class AnalysisResponse(BaseModel):
+    filename: str
+    size: int
+    issues: List[Any] = []
+
 class AnalysisResult(BaseModel):
     doc_id: str
     filename: str
     issues: List[Issue]
     summary: str
     risks: List[str]
-    metadata: Optional[dict] = None
-=======
+    metadata: Optional[Dict[str, Any]] = None
+
+class AnalysisProgress(BaseModel):
+    doc_id: str
+    status: Literal["pending", "processing", "completed", "failed"]
+    progress: float = Field(ge=0, le=1)
+    message: Optional[str] = None
+
 class ReviewResult(BaseModel):
     summary: str
     risks: List[str] = []
@@ -71,24 +69,7 @@ class ReviewResult(BaseModel):
     next_actions: List[str] = []
     issues: List[Issue] = []
 
-
-# --- Added for contract endpoints ---
-class UploadResponse(BaseModel):
-    filename: str
-    size: int
-    doc_id: str
-
-class AnalysisResponse(BaseModel):
-    filename: str
-    size: int
-    issues: List[Any] = []
-<<<<<<< Current (Your changes)
->>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
-=======
-
-# --- Enhanced Data Models ---
-from enum import Enum
-from datetime import datetime
+# --- Enhanced Data Models for Advanced Features ---
 
 class RuleSeverity(str, Enum):
     red = "red"
@@ -155,4 +136,3 @@ class ContractAnalysis(BaseModel):
     risks: List[str] = []
     redlines: Dict[str, Any] = {}
     next_actions: List[str] = []
->>>>>>> Incoming (Background Agent changes)

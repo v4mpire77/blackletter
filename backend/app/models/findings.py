@@ -1,8 +1,15 @@
 from typing import List, Literal
 from pydantic import BaseModel
-from .rules import Severity, Citation  # reuse if you split models
+from .rules import Severity
 
-Verdict = Literal["compliant", "non_compliant", "weak", "insufficient_context"]
+# Citation model (reused from rules)
+class Citation(BaseModel):
+    doc_id: str
+    page: int
+    start: int
+    end: int
+
+Verdict = Literal["compliant","non_compliant","weak","insufficient_context"]
 
 class Quote(BaseModel):
     text: str
@@ -12,7 +19,7 @@ class Finding(BaseModel):
     rule_id: str
     severity: Severity
     verdict: Verdict
-    risk: Literal["low", "medium", "high"]
+    risk: Literal["low","medium","high"]
     rationale: str
     snippet: str
     improvements: List[str] = []

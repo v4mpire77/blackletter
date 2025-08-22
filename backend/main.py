@@ -2,16 +2,16 @@ from __future__ import annotations
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-<<<<<<< HEAD
-from .routers import contracts, dashboard, rag, nlp_router
-=======
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 from dotenv import load_dotenv
->>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
 
-# Import the new Gemini router
-from .routers import contracts, gemini  # , ocr  # Commented out ocr import
+# Import routers with error handling
+try:
+    from .routers import contracts, dashboard, rag, nlp_router, gemini
+except ImportError:
+    # Fallback for basic functionality
+    from .routers import contracts, gemini
 
 load_dotenv()  # only needed locally
 
@@ -21,30 +21,19 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-<<<<<<< HEAD
-        "https://blackletter-frontend.onrender.com",
-        "https://blackletter-systems.onrender.com"
-=======
         "http://localhost:3001",
+        "https://blackletter-frontend.onrender.com",
+        "https://blackletter-systems.onrender.com",
         "https://blackletter.vercel.app",
-        "*",
->>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
+        "*",  # Allow all origins for development
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-<<<<<<< HEAD
-# Mount routers
-app.include_router(contracts.router, prefix="/api")
-app.include_router(dashboard.router, prefix="/api")
-app.include_router(rag.router, prefix="/api/rag")
-app.include_router(nlp_router.router, prefix="/api")
-=======
 # Define the frontend build directory
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), "../frontend/out")
->>>>>>> adf109136d992a65760cbd36af2e98e5ef674ae2
 
 # Mount the frontend static files if the directory exists
 if os.path.exists(FRONTEND_BUILD_DIR):
@@ -69,18 +58,34 @@ if os.path.exists(FRONTEND_BUILD_DIR):
 def health():
     return {"service": "blackletter", "status": "ok"}
 
-# API Routers
+# API Routers - Mount with error handling
 app.include_router(contracts.router, prefix="/api", tags=["contracts"])
-app.include_router(gemini.router,    prefix="/api", tags=["gemini"])
+app.include_router(gemini.router, prefix="/api", tags=["gemini"])
+
+# Optional routers - mount if available
+try:
+    app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
+except NameError:
+    print("Dashboard router not available")
+
+try:
+    app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
+except NameError:
+    print("RAG router not available")
+
+try:
+    app.include_router(nlp_router.router, prefix="/api", tags=["nlp"])
+except NameError:
+    print("NLP router not available")
+
 # OCR router - conditionally mounted when ENABLE_OCR=true
-# ENABLE_OCR = os.getenv("ENABLE_OCR", "false").lower() in {"1", "true", "yes"}
-# if ENABLE_OCR:
-#     try:
-#         from .routers import ocr
-#         app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
-#     except ImportError:
-#         # OCR dependencies not available - OCR functionality will be disabled
-#         pass
+ENABLE_OCR = os.getenv("ENABLE_OCR", "false").lower() in {"1", "true", "yes"}
+if ENABLE_OCR:
+    try:
+        from .routers import ocr
+        app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
+    except ImportError:
+        print("OCR dependencies not available - OCR functionality will be disabled")
 
 # Optional: mount RAG sub-app if available
 try:
