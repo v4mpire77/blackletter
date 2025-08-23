@@ -13,7 +13,7 @@ import logging
 
 # Import routers with error handling
 try:
-    from .routers import contracts, dashboard, rag, nlp_router, gemini
+    from .routers import contracts, rag, gemini
 except ImportError:
     # Fallback for basic functionality
     from .routers import contracts, gemini
@@ -128,20 +128,14 @@ app.include_router(contracts.router, prefix="/api", tags=["contracts"])
 app.include_router(gemini.router, prefix="/api", tags=["gemini"])
 
 # Optional routers - mount if available
-try:
-    app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
-except NameError:
-    print("Dashboard router not available")
+# Dashboard router not available
 
 try:
     app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
 except NameError:
     print("RAG router not available")
 
-try:
-    app.include_router(nlp_router.router, prefix="/api", tags=["nlp"])
-except NameError:
-    print("NLP router not available")
+# NLP router not available
 
 # OCR router - conditionally mounted when ENABLE_OCR=true
 ENABLE_OCR = os.getenv("ENABLE_OCR", "false").lower() in {"1", "true", "yes"}

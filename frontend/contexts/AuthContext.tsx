@@ -37,34 +37,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createSupabaseClient()
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
-      setUser(session?.user ?? null)
+    // Only initialize Supabase on the client side
+    if (typeof window === 'undefined') {
       setLoading(false)
+      return
     }
 
-    getSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
+    try {
+      const supabase = createSupabaseClient()
+      
+      // Get initial session
+      const getSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
       }
-    )
 
-    return () => subscription.unsubscribe()
-  }, [supabase])
+      getSession()
+
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event: AuthChangeEvent, session: Session | null) => {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
+      )
+
+      return () => subscription.unsubscribe()
+    } catch (error) {
+      console.warn('Supabase not available:', error)
+      setLoading(false)
+    }
+  }, [])
 
   const signUp = async (email: string, password: string, metadata?: object) => {
     const startTime = performance.now()
     try {
+      const supabase = createSupabaseClient()
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -85,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const startTime = performance.now()
     try {
+      const supabase = createSupabaseClient()
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -102,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     const startTime = performance.now()
     try {
+      const supabase = createSupabaseClient()
       const { error } = await supabase.auth.signOut()
       const duration = performance.now() - startTime
       console.debug(`Sign out operation completed in ${duration}ms`)
@@ -116,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     const startTime = performance.now()
     try {
+      const supabase = createSupabaseClient()
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       })

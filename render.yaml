@@ -2,7 +2,7 @@ services:
   # Web service (Frontend)
   - type: web
     name: blackletter-frontend
-    env: node
+    runtime: node
     buildCommand: cd frontend && npm install && npm run build
     startCommand: cd frontend && npm start
     envVars:
@@ -14,7 +14,7 @@ services:
           type: web
           property: url
     autoDeploy: true
-    healthCheckPath: /
+    healthCheckPath: /app
     plan: free
     domains:
       - blackletter.onrender.com
@@ -22,9 +22,9 @@ services:
   # API service (Backend)
   - type: web
     name: blackletter-api
-    env: python
-    buildCommand: pip install -r src/backend/requirements.txt
-    startCommand: cd src && gunicorn backend.main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && gunicorn main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

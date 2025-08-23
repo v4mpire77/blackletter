@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -7,7 +8,7 @@ import Link from 'next/link'
 import { FileTextIcon, SearchIcon, ShieldCheckIcon, UploadIcon } from 'lucide-react'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 
-export default function DashboardPage() {
+function DashboardPage() {
   const { user } = useAuth()
 
   return (
@@ -113,3 +114,7 @@ export default function DashboardPage() {
     </ProtectedRoute>
   )
 }
+
+export default dynamic(() => Promise.resolve(DashboardPage), {
+  ssr: false
+})

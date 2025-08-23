@@ -113,3 +113,4 @@ class SecurityConfig:
 
 # Global security configuration instance
 security_config = SecurityConfig()
+

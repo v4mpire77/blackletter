@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDropzone } from 'react-dropzone'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
+import dynamic from 'next/dynamic'
 
-export default function UploadPage() {
+function UploadPage() {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [documentType, setDocumentType] = useState('contract')
@@ -158,3 +159,7 @@ export default function UploadPage() {
     </ProtectedRoute>
   )
 }
+
+export default dynamic(() => Promise.resolve(UploadPage), {
+  ssr: false
+})
