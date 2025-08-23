@@ -9,8 +9,17 @@ This module provides API endpoints for contract analysis:
 
 import os
 import time
-from typing import Dict, List, Optional, Any
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, BackgroundTasks
+from typing import Any, Callable, Dict, List, Optional
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
 import httpx
 
 from app.models.schemas import (
@@ -21,6 +30,18 @@ from app.core.storage import upload_file, generate_presigned_url
 from app.services.contract_review import review_contract
 
 router = APIRouter()
+
+
+def schedule_background_task(
+    background_tasks: BackgroundTasks, target: Callable, *args, **kwargs
+) -> None:
+    """Schedule a coroutine to run after the response is sent.
+
+    Centralizing this helper keeps route handlers clean and allows future
+    enhancements (like logging) in one place.
+    """
+
+    background_tasks.add_task(target, *args, **kwargs)
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_contract(
@@ -111,11 +132,12 @@ async def review_contract_endpoint(
             processing_time=processing_time
         )
         
-        # Send webhook notification in the background
-        background_tasks.add_task(
+        # Queue webhook notification in the background using helper
+        schedule_background_task(
+            background_tasks,
             notify_contract_processed,
             document_key=request.document_key,
-            review_result=review_result
+            review_result=review_result,
         )
         
         return response
