@@ -98,6 +98,152 @@ This document tracks all bugs, issues, and their resolutions throughout the Blac
 
 **Steps to Reproduce:**
 1. Open application on mobile device
+
+## Recently Resolved Issues
+
+### BUG-002: Supabase Build-Time Initialization Errors
+**Date Reported:** 2025-01-24
+**Reporter:** Omar
+**Priority:** P0 (Critical)
+**Status:** Resolved
+
+### Description
+Next.js build process was failing due to Supabase client initialization during build time when environment variables were not available. This prevented deployment to Render.
+
+### Steps to Reproduce
+1. Run `npm run build` in frontend directory
+2. Build fails with "supabaseUrl is required" errors
+3. Multiple pages fail prerendering due to Supabase dependency
+
+### Expected Behavior
+Build should complete successfully and generate static pages for deployment.
+
+### Actual Behavior
+Build failed with Supabase configuration errors, preventing deployment.
+
+### Environment
+- **OS:** Windows 10
+- **Frontend Version:** Next.js 14.0.4
+- **Supabase:** @supabase/supabase-js v2.39.0
+- **Build Target:** Render deployment platform
+
+### Error Messages
+```
+Error: supabaseUrl is required.
+Error occurred prerendering page "/dashboard"
+Error occurred prerendering page "/upload"
+Error occurred prerendering page "/login"
+```
+
+### Root Cause
+Two Supabase client files (`frontend/lib/supabase.ts` and `frontend/lib/supabaseClient.ts`) were both trying to initialize the Supabase client immediately during build time, before environment variables were available.
+
+### Resolution
+1. **Fixed `frontend/lib/supabase.ts`:**
+   - Added conditional client initialization: `typeof window !== 'undefined'`
+   - Wrapped client creation in try-catch blocks
+   - Made `createSupabaseClient()` function safe for server-side rendering
+
+2. **Fixed `frontend/lib/supabaseClient.ts`:**
+   - Added conditional initialization check
+   - Created `getSupabaseClient()` function for safe access
+   - Prevented immediate client creation during build
+
+3. **Updated `frontend/contexts/AuthContext.tsx`:**
+   - Added client-side only initialization check
+   - Wrapped Supabase operations in try-catch blocks
+   - Made authentication functions resilient to missing Supabase
+
+4. **Updated components to use dynamic imports:**
+   - Added `next/dynamic` with `ssr: false` to Supabase-dependent pages
+   - Updated dashboard, upload, and login pages
+
+### Files Modified
+- `frontend/lib/supabase.ts`
+- `frontend/lib/supabaseClient.ts`
+- `frontend/contexts/AuthContext.tsx`
+- `frontend/app/dashboard/page.tsx`
+- `frontend/app/upload/page.tsx`
+- `frontend/app/login/page.tsx`
+
+### Testing
+- **Build Test:** ✅ `npm run build` now completes successfully
+- **Type Check:** ✅ `npx tsc --noEmit` passes with no errors
+- **Page Generation:** ✅ All 9 pages generate successfully
+- **Supabase Errors:** ✅ No more build-time Supabase initialization errors
+
+### Prevention
+- Always use conditional initialization for client-side only libraries
+- Wrap environment variable access in safety checks
+- Use `next/dynamic` for components that require client-side APIs
+- Test builds in CI/CD pipeline before deployment
+
+### Related Issues
+- Render deployment failures
+- Frontend build process issues
+
+---
+
+### BUG-003: Frontend Layout Issues - Unwanted Left Column
+**Date Reported:** 2025-01-24
+**Reporter:** Omar
+**Priority:** P1 (High)
+**Status:** Resolved
+
+### Description
+Deployed application was displaying an unwanted left column/sidebar that was not part of the intended layout design.
+
+### Steps to Reproduce
+1. Deploy application to Render
+2. View deployed application
+3. Notice unwanted left column taking up screen space
+
+### Expected Behavior
+Clean, centered layout without unwanted columns or sidebars.
+
+### Actual Behavior
+Application displays with an unwanted left column, affecting user experience and layout.
+
+### Environment
+- **Platform:** Render deployment
+- **Frontend:** Next.js 14 with Tailwind CSS
+- **Layout:** App router with custom CSS
+
+### Root Cause
+CSS conflicts between custom `.container` classes and Tailwind CSS's built-in container utilities, potentially causing layout issues.
+
+### Resolution
+1. **Fixed CSS Container Conflicts:**
+   - Renamed custom `.container` CSS to `.layout-container` in `frontend/app/globals.css`
+   - Prevented conflicts with Tailwind's container utilities
+
+2. **Added Layout Safety Measures:**
+   - Added `overflow-x: hidden` to prevent horizontal scroll
+   - Implemented `box-sizing: border-box` for all elements
+   - Added flex container fixes to prevent overflows
+
+3. **Enhanced CSS Structure:**
+   - Added debugging utilities (commented out)
+   - Improved layout container management
+   - Added responsive design safeguards
+
+### Files Modified
+- `frontend/app/globals.css`
+
+### Testing
+- **Build Test:** ✅ Build completes successfully with new CSS
+- **Layout Safety:** ✅ Added overflow and box-sizing protections
+- **CSS Conflicts:** ✅ Resolved container class conflicts
+
+### Prevention
+- Use unique class names to avoid conflicts with framework CSS
+- Test layouts across different screen sizes
+- Implement CSS reset and normalization
+- Use CSS debugging tools to identify layout issues
+
+### Related Issues
+- Production layout problems
+- CSS framework conflicts
 2. Try to access navigation menu
 3. Menu doesn't collapse after selection
 
