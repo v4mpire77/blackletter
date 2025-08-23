@@ -1127,22 +1127,31 @@ class RAGAnalyzer:
             from asyncio import Semaphore
             
             sem = Semaphore(parallel_limit)
-            
+
             async def analyze_with_semaphore(doc_id: str) -> Tuple[str, Dict[str, Any]]:
+                """Run analysis for a single document under semaphore control.
+
+                Each invocation acquires the shared semaphore before calling the
+                actual analysis routine, ensuring no more than ``parallel_limit``
+                tasks execute concurrently.
+                """
+
                 async with sem:
                     try:
-                        result = await self.analyze_contract_with_rag(doc_id, text="", metadata=metadata)
+                        result = await self.analyze_contract_with_rag(
+                            doc_id, text="", metadata=metadata
+                        )
                         return doc_id, {"success": True, "result": result}
                     except Exception as e:
                         return doc_id, {"success": False, "error": str(e)}
-            
+
             # Create tasks for all documents
             tasks = [analyze_with_semaphore(doc_id) for doc_id in doc_ids]
-            
-            # Wait for all tasks to complete
+
+            # Wait for all tasks to complete and collect their results
             completed = await asyncio.gather(*tasks)
-            
-            # Process results
+
+            # Process results and build structured response
             for doc_id, result in completed:
                 if result["success"]:
                     results["successful"].append({

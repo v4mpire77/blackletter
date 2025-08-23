@@ -99,6 +99,7 @@ blackletter/
 - [UI/UX Design](docs/UI_UX_doc.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Copilot Instructions](docs/COPILOT_INSTRUCTIONS.md)
+- [Context Engineering Workflow](docs/AGENT_CONTEXT_ENGINEERING_WORKFLOW.md)
 
 ## Deployment
 
