@@ -6,7 +6,7 @@ set -e
 # Build the frontend
 cd frontend
 npm install
-npm run export
+npm run build
 cd ..
 
 # Install backend dependencies
