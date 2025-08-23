@@ -2,12 +2,57 @@
 
 ## 🚨 CRITICAL: All AI agents MUST follow these rules when working on this repository
 
+## 🔄 MANDATORY: Context Engineering Workflow
+
+**ALL AGENTS MUST FOLLOW THE CONTEXT ENGINEERING WORKFLOW FOR EVERY TASK. THIS IS NOT OPTIONAL.**
+
+### Context Engineering Workflow Sequence (ALWAYS FOLLOW THIS ORDER):
+
+1. **CONTEXT ASSESSMENT (ALWAYS FIRST)**
+   - Review Implementation Plan (`docs/Implementation.md`)
+   - Examine Project Structure (`docs/project_structure.md`)
+   - Check UI/UX Guidelines (`docs/UI_UX_doc.md`) - for frontend tasks
+   - Review Bug Tracking (`docs/Bug_tracking.md`)
+
+2. **IMPLEMENTATION PLAN**
+   - Create detailed implementation plan based on context
+   - Identify dependencies and prerequisites
+   - Plan testing strategy
+
+3. **IMPLEMENTATION**
+   - Follow established patterns and architecture
+   - Write quality, testable code
+   - Use existing components and utilities
+
+4. **DOCUMENTATION (CONCURRENT)**
+   - Update docstrings and documentation
+   - Maintain changelog
+   - Document design decisions
+
+5. **VERIFICATION**
+   - Check against quality standards
+   - Verify workflow compliance
+   - Run tests and validation
+
+### Your Response MUST Follow This Structure:
+1. **Context Assessment** - What documentation you reviewed and why
+2. **Implementation Plan** - Your detailed plan based on the context
+3. **Implementation** - Your code implementation
+4. **Documentation** - What documentation you updated
+5. **Verification** - How you verified against the checklist
+
+### NEVER Skip Context Assessment
+- ❌ **NEVER** start coding without reviewing documentation
+- ❌ **NEVER** ignore the established project structure
+- ❌ **NEVER** implement without understanding the broader context
+
 ### 📋 Core Principles
 
-1. **Legal Domain Expertise**: This is a legal technology platform. Always consider legal implications, compliance requirements, and professional standards.
-2. **Security First**: Legal documents contain sensitive information. Security and privacy are paramount.
-3. **Quality Over Speed**: Legal analysis must be accurate and reliable. Never sacrifice quality for speed.
-4. **Documentation Required**: Every change must be properly documented for legal compliance and audit trails.
+1. **Context Engineering First**: ALWAYS follow the Context Engineering workflow before any implementation
+2. **Legal Domain Expertise**: This is a legal technology platform. Always consider legal implications, compliance requirements, and professional standards.
+3. **Security First**: Legal documents contain sensitive information. Security and privacy are paramount.
+4. **Quality Over Speed**: Legal analysis must be accurate and reliable. Never sacrifice quality for speed.
+5. **Documentation Required**: Every change must be properly documented for legal compliance and audit trails.
 
 ### 🔒 Security & Privacy Rules
 
@@ -90,11 +135,23 @@
 
 ### 🚀 Development Workflow
 
+#### Context Engineering Workflow (MANDATORY)
+1. **ALWAYS** start with Context Assessment using the Context Engineering tools
+2. **ALWAYS** generate context summary for complex tasks
+3. **ALWAYS** use workflow templates for implementation
+4. **ALWAYS** validate your response against the workflow requirements
+
+#### Available Context Engineering Tools
+- **`tools/context_engineering_automation.py`** - Generate context summaries and workflow templates
+- **`tools/context_engineering_validator.py`** - Validate responses against workflow requirements
+- **`tools/context_engineering.ps1`** - Windows PowerShell interface for the tools
+
 #### Before Making Changes
-1. **ALWAYS** read and understand the existing codebase
-2. **ALWAYS** check for existing issues or PRs
-3. **ALWAYS** understand the legal implications of changes
-4. **ALWAYS** test changes in a development environment
+1. **ALWAYS** follow the Context Engineering workflow first
+2. **ALWAYS** read and understand the existing codebase
+3. **ALWAYS** check for existing issues or PRs
+4. **ALWAYS** understand the legal implications of changes
+5. **ALWAYS** test changes in a development environment
 
 #### During Development
 1. **ALWAYS** follow the established project structure
@@ -104,15 +161,31 @@
 5. **ALWAYS** test with real legal documents
 
 #### Before Submitting
-1. **ALWAYS** run all tests and ensure they pass
-2. **ALWAYS** check for security vulnerabilities
-3. **ALWAYS** update relevant documentation
-4. **ALWAYS** verify legal compliance requirements
-5. **ALWAYS** test with multiple document formats
+1. **ALWAYS** validate your response against the Context Engineering workflow
+2. **ALWAYS** run all tests and ensure they pass
+3. **ALWAYS** check for security vulnerabilities
+4. **ALWAYS** update relevant documentation
+5. **ALWAYS** verify legal compliance requirements
+6. **ALWAYS** test with multiple document formats
+
+#### Workflow Validation
+Use the Context Engineering validator to ensure compliance:
+```bash
+# Validate your response
+python tools/context_engineering_validator.py your_response.txt
+
+# Or use PowerShell on Windows
+.\tools\context_engineering.ps1 -Action validate -Task your_response.txt
+```
+
+**Your response must score 80%+ to be considered compliant.**
 
 ### 🎯 Quality Assurance
 
 #### Code Review Checklist
+- [ ] Context Engineering workflow followed
+- [ ] Context Assessment completed
+- [ ] Implementation Plan created
 - [ ] Security review completed
 - [ ] Legal compliance verified
 - [ ] Tests written and passing
@@ -120,6 +193,13 @@
 - [ ] Performance impact assessed
 - [ ] Error handling implemented
 - [ ] API compatibility maintained
+
+#### Context Engineering Checklist
+- [ ] All required documentation reviewed (`docs/Implementation.md`, `docs/project_structure.md`, etc.)
+- [ ] Context summary generated for complex tasks
+- [ ] Workflow template used for implementation
+- [ ] Response validated against workflow requirements (80%+ score)
+- [ ] All workflow steps completed (Context → Implementation → Documentation → Verification)
 
 #### Legal Compliance Checklist
 - [ ] GDPR requirements met
@@ -175,14 +255,52 @@
 
 ---
 
+## 🔧 Context Engineering Tools Reference
+
+### Quick Start Commands
+
+#### Generate Context Summary
+```bash
+# Python
+python tools/context_engineering_automation.py "Your task description"
+
+# PowerShell (Windows)
+.\tools\context_engineering.ps1 -Task "Your task description" -Action summary
+```
+
+#### Generate Workflow Template
+```bash
+# Python
+python tools/context_engineering_automation.py "Your task description" --template
+
+# PowerShell (Windows)
+.\tools\context_engineering.ps1 -Task "Your task description" -Action template
+```
+
+#### Validate Response
+```bash
+# Python
+python tools/context_engineering_validator.py your_response.txt
+
+# PowerShell (Windows)
+.\tools\context_engineering.ps1 -Action validate -Task your_response.txt
+```
+
+### Tool Documentation
+- **Complete Tool Guide**: `tools/README.md`
+- **Python Tools**: `tools/context_engineering_automation.py`, `tools/context_engineering_validator.py`
+- **PowerShell Script**: `tools/context_engineering.ps1`
+
+---
+
 ## 📋 Agent Acknowledgment
 
-By working on this repository, I acknowledge that I have read, understood, and will follow all the rules outlined above. I understand that this is a legal technology platform and that the quality, security, and compliance of my work directly impacts legal professionals and their clients.
+By working on this repository, I acknowledge that I have read, understood, and will follow all the rules outlined above, including the mandatory Context Engineering workflow. I understand that this is a legal technology platform and that the quality, security, and compliance of my work directly impacts legal professionals and their clients.
 
-**Remember**: When in doubt, prioritize security, legal compliance, and code quality over speed or convenience.
+**Remember**: When in doubt, prioritize Context Engineering workflow, security, legal compliance, and code quality over speed or convenience.
 
 ---
 
 *Last Updated: January 2025*
-*Version: 1.0*
+*Version: 2.0 - Updated with Context Engineering Framework*
 *Applicable to: All AI agents working on Blackletter Systems repository*

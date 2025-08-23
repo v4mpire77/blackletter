@@ -1,104 +1,230 @@
-# Context Engineering Enforcement
+# Context Engineering Prompt Enforcement System
 
-This document outlines how to enforce the Context Engineering workflow for all agents working on the Blackletter Systems project.
+## 🎯 Purpose
 
-## Enforcement Checklist
+This document establishes a mandatory system to ensure that **every agent interaction** with the Blackletter Systems codebase uses the appropriate Context Engineering prompts. This prevents agents from working without proper context and ensures consistent, high-quality development.
 
-Use this checklist to verify that an agent is properly following the Context Engineering workflow:
+## 🚨 MANDATORY REQUIREMENT
 
-### 1. Context Assessment Verification
+**NO AGENT INTERACTION IS ALLOWED WITHOUT CONTEXT ENGINEERING PROMPTS**
 
-- [ ] Agent explicitly mentioned reviewing `docs/Implementation.md`
-- [ ] Agent explicitly mentioned reviewing `docs/project_structure.md`
-- [ ] Agent explicitly mentioned reviewing relevant UI/UX documentation (for frontend tasks)
-- [ ] Agent explicitly mentioned reviewing bug tracking documentation
-- [ ] Agent demonstrated understanding of the feature's place in the overall architecture
-- [ ] Agent identified the correct location for code changes based on project structure
+## 📋 Context Engineering Prompt Categories
 
-### 2. Implementation Verification
+### 1. **Development Tasks** - Use `AGENT_CE_DEVELOPMENT.md`
+- Code development and implementation
+- Feature building
+- Bug fixes
+- Refactoring
+- Testing implementation
 
-- [ ] Agent followed established code patterns
-- [ ] Agent adhered to the architectural guidelines
-- [ ] Agent used existing utilities and components where appropriate
-- [ ] Agent implemented proper error handling
-- [ ] Agent's code is testable
-- [ ] Agent's code follows naming conventions
-- [ ] Agent's code is properly typed (where applicable)
+### 2. **Code Review & Analysis** - Use `AGENT_CE_REVIEW.md`
+- Code review and feedback
+- Performance analysis
+- Security audits
+- Architecture reviews
+- Dependency analysis
 
-### 3. Documentation Verification
+### 3. **Documentation & Planning** - Use `AGENT_CE_DOCUMENTATION.md`
+- Documentation creation
+- Planning and strategy
+- Requirements analysis
+- User story creation
+- Technical specifications
 
-- [ ] Agent included proper docstrings
-- [ ] Agent updated relevant documentation
-- [ ] Agent explained any non-obvious design decisions
-- [ ] Agent documented any breaking changes
+### 4. **Debugging & Troubleshooting** - Use `AGENT_CE_DEBUGGING.md`
+- Error investigation
+- Performance issues
+- Deployment problems
+- System failures
+- Root cause analysis
 
-### 4. Rule Compliance Verification
+### 5. **Integration & Deployment** - Use `AGENT_CE_INTEGRATION.md`
+- System integration
+- Deployment processes
+- CI/CD pipeline
+- Environment setup
+- Configuration management
 
-- [ ] Agent did not violate any NEVER rules
-- [ ] Agent followed all ALWAYS rules
-- [ ] Agent's code meets quality standards
-- [ ] Agent's implementation is consistent with the rest of the codebase
+## 🔒 Enforcement Mechanisms
 
-## Enforcement Actions
+### 1. **Pre-Interaction Validation**
+Before any agent interaction begins, the system MUST:
+- ✅ Identify the task category
+- ✅ Load the appropriate Context Engineering prompt
+- ✅ Verify prompt is loaded and active
+- ✅ Confirm agent has access to required context
 
-If an agent fails to follow the Context Engineering workflow, take these actions:
-
-1. **First Violation**: Remind the agent of the Context Engineering workflow and ask them to redo the task following the proper sequence.
-
-2. **Second Violation**: Provide the agent with the full Context Engineering documentation (`docs/AGENT_CONTEXT_ENGINEERING_WORKFLOW.md`) and require them to explicitly address each step.
-
-3. **Persistent Violations**: Replace the agent with one that will follow the Context Engineering workflow.
-
-## Enforcement Prompts
-
-### Reminder Prompt
-
-```
-I notice you haven't followed the Context Engineering workflow. Before implementing any solution, you MUST:
-
-1. Review the Implementation Plan (docs/Implementation.md)
-2. Examine the Project Structure (docs/project_structure.md)
-3. Check relevant guidelines and documentation
-
-Please restart your approach following the proper Context Engineering workflow sequence.
-```
-
-### Correction Prompt
-
-```
-Your implementation does not follow the Context Engineering workflow. Specifically:
-
-[List specific violations]
-
-Please revise your approach to:
-1. Explicitly review the required documentation
-2. Follow established patterns
-3. Adhere to the project architecture
-4. Include proper documentation
-
-Reference the Context Engineering workflow documentation for guidance.
+### 2. **Prompt Injection System**
+Every agent interaction MUST include:
+```markdown
+## 🎯 CONTEXT ENGINEERING PROMPT ACTIVE
+**Category:** [DEVELOPMENT/REVIEW/DOCUMENTATION/DEBUGGING/INTEGRATION]
+**Prompt File:** [filename.md]
+**Status:** ✅ LOADED AND ENFORCED
 ```
 
-## Monitoring Compliance
+### 3. **Context Verification Checkpoints**
+During agent interactions, verify:
+- ✅ Required documentation is accessible
+- ✅ Codebase context is loaded
+- ✅ Framework guidelines are followed
+- ✅ Quality standards are enforced
 
-To ensure ongoing compliance with the Context Engineering workflow:
+## 📁 Prompt File Structure
 
-1. Regularly review agent outputs for workflow adherence
-2. Document common workflow violations
-3. Update the Context Engineering documentation as needed
-4. Provide feedback to improve agent compliance
+### Base Template for All Prompts
+```markdown
+# Context Engineering Prompt: [CATEGORY]
 
-## Success Criteria
+## 🎯 Purpose
+[Specific purpose for this category]
 
-An agent is successfully following the Context Engineering workflow when:
+## 📋 Required Context
+- [List of required context files]
+- [Required codebase sections]
+- [Mandatory framework references]
 
-1. They explicitly perform context assessment before implementation
-2. Their code follows established patterns and architecture
-3. They provide proper documentation
-4. They verify their work against the Context Engineering checklist
-5. They do not violate any NEVER rules
-6. They follow all ALWAYS rules
+## 🔧 Task Execution Protocol
+[Step-by-step process for this category]
 
-## Conclusion
+## ✅ Quality Standards
+[Specific quality requirements]
 
-Enforcing the Context Engineering workflow is essential for maintaining code quality, consistency, and maintainability in the Blackletter Systems project. All agents must follow this workflow without exception.
+## 🚫 Prohibited Actions
+[What agents cannot do without context]
+
+## 📚 Required Documentation
+[Links to required documentation]
+```
+
+## 🚀 Implementation Steps
+
+### Step 1: Create Category-Specific Prompts
+1. **Development Prompt** - `AGENT_CE_DEVELOPMENT.md`
+2. **Review Prompt** - `AGENT_CE_REVIEW.md`
+3. **Documentation Prompt** - `AGENT_CE_DOCUMENTATION.md`
+4. **Debugging Prompt** - `AGENT_CE_DEBUGGING.md`
+5. **Integration Prompt** - `AGENT_CE_INTEGRATION.md`
+
+### Step 2: Implement Enforcement System
+1. **Prompt Loader** - Automatically loads appropriate prompt
+2. **Context Validator** - Verifies required context is available
+3. **Interaction Monitor** - Tracks prompt usage compliance
+4. **Blocking Mechanism** - Prevents interactions without prompts
+
+### Step 3: Integration with Agent Systems
+1. **GitHub Actions** - Enforce prompts in CI/CD
+2. **Development Tools** - Integrate with IDEs and editors
+3. **Documentation System** - Embed prompts in docs
+4. **Training Materials** - Ensure team adoption
+
+## 🔍 Compliance Monitoring
+
+### Automated Checks
+- ✅ Prompt loading verification
+- ✅ Context availability validation
+- ✅ Framework compliance checking
+- ✅ Quality standard enforcement
+
+### Manual Verification
+- ✅ Code review compliance
+- ✅ Documentation quality checks
+- ✅ Process adherence monitoring
+- ✅ Team training validation
+
+## 🚫 Non-Compliance Consequences
+
+### Immediate Actions
+1. **Block Interaction** - Prevent agent from proceeding
+2. **Force Prompt Load** - Automatically load required prompt
+3. **Log Violation** - Record non-compliance for review
+4. **Require Acknowledgment** - Force prompt acceptance
+
+### Escalation Process
+1. **Warning** - First violation notification
+2. **Blocking** - Prevent further interactions
+3. **Review** - Team lead investigation
+4. **Training** - Mandatory prompt training
+5. **Monitoring** - Enhanced compliance tracking
+
+## 📊 Success Metrics
+
+### Compliance Rate
+- **Target:** 100% prompt usage
+- **Measurement:** Automated tracking
+- **Reporting:** Daily compliance reports
+
+### Quality Improvement
+- **Target:** 25% reduction in errors
+- **Measurement:** Error tracking system
+- **Baseline:** Pre-implementation error rates
+
+### Team Adoption
+- **Target:** 100% team compliance
+- **Measurement:** Training completion
+- **Timeline:** 30 days from implementation
+
+## 🔄 Continuous Improvement
+
+### Feedback Collection
+- Agent interaction quality metrics
+- Prompt effectiveness ratings
+- Context completeness feedback
+- Process improvement suggestions
+
+### Prompt Evolution
+- Regular prompt updates
+- New category additions
+- Context requirement refinements
+- Quality standard enhancements
+
+### System Optimization
+- Enforcement mechanism improvements
+- Automation enhancements
+- Integration refinements
+- Performance optimizations
+
+## 📚 Training and Adoption
+
+### Team Training
+1. **Context Engineering Overview** - Framework understanding
+2. **Prompt Usage** - How to use prompts effectively
+3. **Compliance Requirements** - Mandatory usage rules
+4. **Quality Standards** - Framework quality requirements
+5. **Tool Integration** - How to use enforcement tools
+
+### Documentation Updates
+1. **Quick Reference Guide** - Essential prompt information
+2. **Troubleshooting Guide** - Common issues and solutions
+3. **Best Practices** - Effective prompt usage tips
+4. **Examples** - Real-world usage scenarios
+
+## 🎯 Next Actions
+
+### Immediate (This Week)
+1. ✅ Create all category-specific prompts
+2. ✅ Implement basic enforcement system
+3. ✅ Test with sample interactions
+4. ✅ Document enforcement procedures
+
+### Short-term (Next 2 Weeks)
+1. 🔄 Integrate with development tools
+2. 🔄 Implement automated compliance checking
+3. 🔄 Create team training materials
+4. 🔄 Establish monitoring and reporting
+
+### Long-term (Next Month)
+1. 📋 Full system integration
+2. 📋 Team training completion
+3. 📋 Compliance monitoring active
+4. 📋 Continuous improvement process
+
+---
+
+## 🚨 CRITICAL REMINDER
+
+**EVERY AGENT INTERACTION MUST USE CONTEXT ENGINEERING PROMPTS**
+
+**NO EXCEPTIONS - NO BYPASSES - NO ALTERNATIVES**
+
+**COMPLIANCE IS MANDATORY FOR ALL DEVELOPMENT WORK**
