@@ -32,3 +32,4 @@ ollama==0.1.7
 # Utilities
 requests==2.31.0
 tqdm==4.66.1
+scikit-learn==1.7.1
