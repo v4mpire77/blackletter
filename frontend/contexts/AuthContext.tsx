@@ -1,6 +1,6 @@
 'use client'
 
-/**
+/*
  * Authentication Context Provider
  * 
  * Provides authentication state and methods throughout the application.

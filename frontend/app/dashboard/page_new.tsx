@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { 
   Upload, FileText, AlertTriangle, Scale, ShieldCheck, 
   Gavel, Filter, Search, Download, RefreshCw, Sparkles,
-  Sun, Moon
+  Sun, Moon, Eye, EyeOff
 } from "lucide-react";
 
 // Import shadcn/ui components
@@ -27,6 +27,7 @@ import {
   Bar,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip as RTooltip,
   Legend,
   PieChart,
@@ -182,10 +183,10 @@ export default function Dashboard() {
   ];
 
   // Helper function
-  const toPercent = (decimal: number) => (decimal * 100).toFixed(1) + '%';
+  const toPercent = (decimal: number) => `${(decimal * 100).toFixed(1)}%`;
 
   return (
-    <div className={darkMode ? 'min-h-screen dark bg-gray-900' : 'min-h-screen bg-gray-50'}>
+    <div className={`min-h-screen transition-colors ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -200,8 +201,16 @@ export default function Dashboard() {
           
           <div className="flex items-center gap-4">
             {/* API Status */}
-            <div className={apiHealth === 'ok' ? 'px-2 py-1 rounded-full text-xs flex items-center gap-1.5 bg-green-500/10 text-green-400 border border-green-500/20' : apiHealth === 'error' ? 'px-2 py-1 rounded-full text-xs flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/20' : 'px-2 py-1 rounded-full text-xs flex items-center gap-1.5 bg-gray-700 text-gray-400 border border-gray-600'}>
-              <div className={apiHealth === 'ok' ? 'w-1.5 h-1.5 rounded-full bg-green-400' : apiHealth === 'error' ? 'w-1.5 h-1.5 rounded-full bg-red-400' : 'w-1.5 h-1.5 rounded-full bg-gray-400'} />
+            <div className={`px-2 py-1 rounded-full text-xs flex items-center gap-1.5 ${
+              apiHealth === 'ok' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+              apiHealth === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+              'bg-gray-700 text-gray-400 border border-gray-600'
+            }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                apiHealth === 'ok' ? 'bg-green-400' :
+                apiHealth === 'error' ? 'bg-red-400' :
+                'bg-gray-400'
+              }`} />
               {apiHealth === 'loading' ? 'Connecting...' : apiHealth.toUpperCase()}
             </div>
 
@@ -219,99 +228,97 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 p-4 lg:grid-cols-4">
           {/* Sidebar Filters */}
-          <div className="w-full lg:w-80 lg:shrink-0">
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="h-4 w-4" /> Filters
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Issue Type</Label>
-                  <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All</SelectItem>
-                      <SelectItem value="GDPR">GDPR</SelectItem>
-                      <SelectItem value="Statute">Statute</SelectItem>
-                      <SelectItem value="Case Law">Case Law</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <Card className="h-fit lg:sticky lg:top-[72px]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Filter className="h-4 w-4" /> Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Issue Type</Label>
+                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All</SelectItem>
+                    <SelectItem value="GDPR">GDPR</SelectItem>
+                    <SelectItem value="Statute">Statute</SelectItem>
+                    <SelectItem value="Case Law">Case Law</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Severity</Label>
-                  <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="Low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>Severity</Label>
+                <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All</SelectItem>
-                      <SelectItem value="Open">Open</SelectItem>
-                      <SelectItem value="In Review">In Review</SelectItem>
-                      <SelectItem value="Resolved">Resolved</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All</SelectItem>
+                    <SelectItem value="Open">Open</SelectItem>
+                    <SelectItem value="In Review">In Review</SelectItem>
+                    <SelectItem value="Resolved">Resolved</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <Separator />
+              <Separator />
 
-                <div className="space-y-2">
-                  <Label>Search</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search issues..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="gdpr-focus">GDPR Focus</Label>
-                  <Switch 
-                    id="gdpr-focus"
-                    checked={gdprFocus}
-                    onCheckedChange={setGdprFocus}
+              <div className="space-y-2">
+                <Label>Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search issues..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
                   />
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="hide-resolved">Hide Resolved</Label>
-                  <Switch
-                    id="hide-resolved"
-                    checked={hideResolved}
-                    onCheckedChange={setHideResolved}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="gdpr-focus">GDPR Focus</Label>
+                <Switch 
+                  id="gdpr-focus"
+                  checked={gdprFocus}
+                  onCheckedChange={setGdprFocus}
+                />
+              </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 space-y-6">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="hide-resolved">Hide Resolved</Label>
+                <Switch
+                  id="hide-resolved"
+                  checked={hideResolved}
+                  onCheckedChange={setHideResolved}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Main Grid */}
+          <div className="space-y-4 lg:col-span-3">
             {/* KPIs */}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <Card>
@@ -421,7 +428,11 @@ export default function Dashboard() {
                           <Badge variant="outline">{issue.type}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={issue.severity === "High" ? "destructive" : issue.severity === "Medium" ? "secondary" : "default"}>
+                          <Badge variant={
+                            issue.severity === "High" ? "destructive" : 
+                            issue.severity === "Medium" ? "secondary" : 
+                            "default"
+                          }>
                             {issue.severity}
                           </Badge>
                         </TableCell>

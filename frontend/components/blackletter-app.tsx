@@ -60,8 +60,8 @@ import {
   Key,
   RefreshCw,
   FileOutput,
-  Ban
-} from 'lucide-react';
+  Ban,
+} from 'lucide-react'; // Importing all necessary icons from lucide-react
 
 // Mock data with legal-specific content
 const recentContracts = [
