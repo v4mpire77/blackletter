@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useDropzone } from 'react-dropzone'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import dynamic from 'next/dynamic'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { FileTextIcon, UploadIcon, ShieldIcon, LockIcon } from 'lucide-react'
 
 function UploadPage() {
   const router = useRouter()
@@ -68,93 +71,181 @@ function UploadPage() {
 
   return (
     <ProtectedRoute>
-      <div className="w-full max-w-4xl mx-auto">
-      <div className="bg-white p-8 rounded-lg shadow-sm">
-        <h1 className="text-2xl font-bold mb-6">Upload Document</h1>
-        
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
-            <select
-              value={documentType}
-              onChange={(e) => setDocumentType(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0A2342] focus:border-[#0A2342]"
-            >
-              <option value="contract">Contract</option>
-              <option value="legislation">Legislation</option>
-              <option value="case">Case</option>
-              <option value="article">Article</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Upload Document</label>
-            <div
-              {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
-                isDragActive ? 'border-[#0A2342] bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              <input {...getInputProps()} />
-              {file ? (
-                <div className="py-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-[#0A2342]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="font-medium mt-2">{file.name}</p>
-                  <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                </div>
-              ) : isDragActive ? (
-                <div className="py-10">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-[#0A2342]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                  </svg>
-                  <p className="mt-2 text-lg">Drop the file here...</p>
-                </div>
-              ) : (
-                <div className="py-10">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="mt-2">Drag and drop a file here, or click to select a file</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Supported formats: PDF, DOC, DOCX, TXT
-                  </p>
-                </div>
-              )}
+      <div className="min-h-screen bg-gray-900 text-white">
+        {/* Header */}
+        <header className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                <FileTextIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Upload Contract</h1>
+                <p className="text-gray-400">AI-powered contract analysis and compliance review</p>
+              </div>
             </div>
           </div>
-          
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={uploading || !file}
-              className={`px-6 py-2 rounded-lg text-white font-medium transition-colors ${
-                uploading || !file
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-[#0A2342] hover:bg-[#0A2342]/90 shadow-sm'
-              }`}
-            >
-              {uploading ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Uploading...
-                </span>
-              ) : 'Upload Document'}
-            </button>
+        </header>
+
+        {/* Main Content */}
+        <main className="max-w-4xl mx-auto px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Upload Section */}
+            <div className="lg:col-span-2">
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-xl text-white">Document Upload</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Drag and drop documents for AI-powered analysis
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {error && (
+                    <div className="bg-red-900/20 border border-red-700 text-red-300 px-4 py-3 rounded-lg">
+                      {error}
+                    </div>
+                  )}
+                  
+                  <div>
+                    <label htmlFor="documentType" className="block text-sm font-medium text-gray-300 mb-2">Document Type</label>
+                    <select
+                      id="documentType"
+                      value={documentType}
+                      onChange={(e) => setDocumentType(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      aria-label="Select document type"
+                    >
+                      <option value="contract">Contract</option>
+                      <option value="legislation">Legislation</option>
+                      <option value="case">Case</option>
+                      <option value="article">Article</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Upload Document</label>
+                    <div
+                      {...getRootProps()}
+                      className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
+                        isDragActive ? 'border-purple-500 bg-purple-900/20' : 'border-gray-600 hover:border-gray-500 bg-gray-700/50'
+                      }`}
+                    >
+                      <input {...getInputProps()} />
+                      {file ? (
+                        <div className="py-4">
+                          <div className="w-16 h-16 bg-green-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                            <FileTextIcon className="w-8 h-8 text-white" />
+                          </div>
+                          <p className="font-medium text-white text-lg">{file.name}</p>
+                          <p className="text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                      ) : isDragActive ? (
+                        <div className="py-10">
+                          <UploadIcon className="w-16 h-16 mx-auto text-purple-400 mb-4" />
+                          <p className="text-xl text-white">Drop the file here...</p>
+                        </div>
+                      ) : (
+                        <div className="py-10">
+                          <UploadIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                          <p className="text-lg text-white mb-2">Drag and drop a file here, or click to select</p>
+                          <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                            + Select Files
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={uploading || !file}
+                      onClick={handleSubmit}
+                      className={`px-8 py-3 rounded-lg font-medium transition-colors ${
+                        uploading || !file
+                          ? 'bg-gray-600 cursor-not-allowed'
+                          : 'bg-purple-600 hover:bg-purple-700 text-white'
+                      }`}
+                    >
+                      {uploading ? (
+                        <span className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Uploading...
+                        </span>
+                      ) : 'Upload Document'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Info Panel */}
+            <div className="space-y-6">
+              {/* File Types */}
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center space-x-2">
+                    <FileTextIcon className="w-5 h-5" />
+                    <span>Supported Formats</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-gray-300">PDF, DOCX, DOC, TXT</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-gray-300">Up to 50MB</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span className="text-gray-300">256-bit encryption</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Security */}
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center space-x-2">
+                    <ShieldIcon className="w-5 h-5" />
+                    <span>Security & Privacy</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 text-sm text-gray-300">
+                    <p>• Enterprise-grade encryption</p>
+                    <p>• GDPR compliant processing</p>
+                    <p>• Secure cloud storage</p>
+                    <p>• Audit trail logging</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Processing */}
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center space-x-2">
+                    <LockIcon className="w-5 h-5" />
+                    <span>AI Processing</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 text-sm text-gray-300">
+                    <p>• Contract risk analysis</p>
+                    <p>• Compliance checking</p>
+                    <p>• Clause identification</p>
+                    <p>• Redline suggestions</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </form>
-        </div>
+        </main>
       </div>
     </ProtectedRoute>
   )

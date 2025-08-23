@@ -1,92 +1,162 @@
 import Link from 'next/link'
+import { FileTextIcon, ShieldCheckIcon, SearchIcon, UploadIcon, ArrowRightIcon } from 'lucide-react'
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center w-full">
-      <section className="w-full py-12 md:py-24 lg:py-32">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col items-center space-y-6 text-center">
-            <div className="space-y-3">
-              <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
-                Blackletter Systems
-              </h1>
-              <p className="text-xl text-[#D5A021] font-semibold">
-                Old rules. New game.
-              </p>
-              <p className="mx-auto max-w-[700px] text-gray-600 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Practical legal automation for contract analysis, compliance, and research.
-              </p>
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header */}
+      <header className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+              <FileTextIcon className="w-6 h-6 text-white" />
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <div>
+              <h1 className="text-xl font-bold text-white">Blackletter</h1>
+              <p className="text-xs text-gray-400">CONTRACT INTELLIGENCE</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/auth/login"
+              className="text-gray-300 hover:text-white transition-colors"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/auth/register"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Get Started
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="py-20 px-8">
+        <div className="max-w-6xl mx-auto text-center">
+          <div className="space-y-6">
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
+              <span className="text-white">Blackletter</span>
+              <span className="text-purple-400"> Systems</span>
+            </h1>
+            <p className="text-2xl text-[#D5A021] font-semibold">
+              Old rules. New game.
+            </p>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Practical legal automation for contract analysis, compliance, and research. 
+              AI-powered insights that legal professionals can trust.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Link
                 href="/upload"
-                className="inline-flex h-10 items-center justify-center rounded-md bg-[#0A2342] px-8 text-sm font-medium text-white shadow transition-colors hover:bg-opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                className="inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-colors"
               >
+                <UploadIcon className="w-5 h-5 mr-2" />
                 Upload Contract
+                <ArrowRightIcon className="w-5 h-5 ml-2" />
               </Link>
               <Link
-                href="/research"
-                className="inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-8 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                href="/dashboard"
+                className="inline-flex items-center justify-center border border-gray-600 text-gray-300 hover:bg-gray-800 px-8 py-4 rounded-lg text-lg font-semibold transition-colors"
               >
-                Research
+                View Dashboard
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-gray-50">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
-            <div className="flex flex-col items-center space-y-4 text-center p-6 bg-white rounded-lg shadow-sm">
-              <div className="rounded-full bg-[#0A2342] p-3 text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                  <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
-                  <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"></path>
-                  <line x1="9" y1="9" x2="10" y2="9"></line>
-                  <line x1="9" y1="13" x2="15" y2="13"></line>
-                  <line x1="9" y1="17" x2="15" y2="17"></line>
-                </svg>
+      {/* Features Section */}
+      <section className="py-20 px-8 bg-gray-800">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-white mb-4">Contract Intelligence Platform</h2>
+            <p className="text-xl text-gray-300">Everything you need for modern legal practice</p>
+          </div>
+          
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="text-center p-8 bg-gray-700 rounded-lg border border-gray-600">
+              <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FileTextIcon className="w-8 h-8 text-white" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold">Contract Analysis</h3>
-                <p className="text-sm text-gray-500">
-                  Upload contracts for automated review, risk scoring, and redlining based on custom playbooks.
-                </p>
-              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Contract Analysis</h3>
+              <p className="text-gray-300">
+                Upload contracts for automated review, risk scoring, and redlining based on custom playbooks.
+              </p>
             </div>
-            <div className="flex flex-col items-center space-y-4 text-center p-6 bg-white rounded-lg shadow-sm">
-              <div className="rounded-full bg-[#0A2342] p-3 text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                  <path d="M9 14l2 2 4-4"></path>
-                </svg>
+            
+            <div className="text-center p-8 bg-gray-700 rounded-lg border border-gray-600">
+              <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <ShieldCheckIcon className="w-8 h-8 text-white" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold">Compliance Checklist</h3>
-                <p className="text-sm text-gray-500">
-                  Stay updated with regulatory changes from ICO, FCA, EU, and UK government sources.
-                </p>
-              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Compliance Checklist</h3>
+              <p className="text-gray-300">
+                Stay updated with regulatory changes from ICO, FCA, EU, and UK government sources.
+              </p>
             </div>
-            <div className="flex flex-col items-center space-y-4 text-center p-6 bg-white rounded-lg shadow-sm">
-              <div className="rounded-full bg-[#0A2342] p-3 text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
+            
+            <div className="text-center p-8 bg-gray-700 rounded-lg border border-gray-600">
+              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <SearchIcon className="w-8 h-8 text-white" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold">Research Assistant</h3>
-                <p className="text-sm text-gray-500">
-                  Semantic search over legal sources with paragraph-level citations and context-aware answers.
-                </p>
-              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Research Assistant</h3>
+              <p className="text-gray-300">
+                Semantic search over legal sources with paragraph-level citations and context-aware answers.
+              </p>
             </div>
           </div>
         </div>
       </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-white mb-6">Ready to Transform Your Legal Practice?</h2>
+          <p className="text-xl text-gray-300 mb-8">
+            Join leading law firms and legal departments using AI to work smarter, not harder.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/auth/register"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-colors"
+            >
+              Start Free Trial
+            </Link>
+            <Link
+              href="/dashboard"
+              className="border border-gray-600 text-gray-300 hover:bg-gray-800 px-8 py-4 rounded-lg text-lg font-semibold transition-colors"
+            >
+              View Demo
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 border-t border-gray-700 py-12 px-8">
+        <div className="max-w-6xl mx-auto text-center">
+          <div className="flex items-center justify-center space-x-3 mb-6">
+            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+              <FileTextIcon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Blackletter</h3>
+              <p className="text-xs text-gray-400">CONTRACT INTELLIGENCE</p>
+            </div>
+          </div>
+          <p className="text-gray-400 mb-4">
+            © 2025 Blackletter Systems. All rights reserved.
+          </p>
+          <div className="flex justify-center space-x-6 text-sm text-gray-400">
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+            <Link href="/security" className="hover:text-white transition-colors">Security</Link>
+            <Link href="/support" className="hover:text-white transition-colors">Support</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
