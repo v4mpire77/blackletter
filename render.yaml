@@ -1,3 +1,4 @@
+# Updated: 2025-08-24 - Fixed backend module path and deployment configuration
 services:
   # Static Site (Frontend)
   - type: static_site
@@ -16,7 +17,7 @@ services:
     name: blackletter-api
     runtime: python
     buildCommand: pip install -r src/backend/requirements.txt
-    startCommand: uvicorn src.backend.main:app --host 0.0.0.0 --port $PORT
+    startCommand: cd src/backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
