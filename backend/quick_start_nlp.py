@@ -9,6 +9,9 @@ import os
 from pathlib import Path
 import json
 import time
+from typing import Optional
+
+from app.core.nlp_engine import NLPEngine
 
 # Add current directory to path
 sys.path.append(str(Path(__file__).parent))
@@ -22,6 +25,24 @@ def print_header(title):
 def print_section(title):
     """Print a formatted section"""
     print(f"\n--- {title} ---")
+
+
+def load_model(model_name: str = "gpt2", task: Optional[str] = None):
+    """Load an NLP model using the system's NLPEngine.
+
+    This helper exposes model loading for tests and scripts while keeping the
+    quick start example self-contained.
+
+    Args:
+        model_name: Name of the model to load.
+        task: Optional task the model should perform.
+
+    Returns:
+        An object implementing the generation interface.
+    """
+
+    engine = NLPEngine()
+    return engine.load_model(model_name, task)
 
 def main():
     """Main quick start demonstration"""

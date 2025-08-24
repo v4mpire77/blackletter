@@ -31,6 +31,28 @@ This document outlines the comprehensive integration plan for the RAG (Retrieval
   - Query and search functionality
   - Batch operations support
 
+  Example REST query:
+
+  ```python
+  import requests
+
+  headers = {
+      "Authorization": "Bearer <token>",
+      "Content-Type": "application/json",
+  }
+
+  payload = {"doc_id": "123", "question": "What is the termination clause?"}
+
+  response = requests.post(
+      "http://localhost:8000/api/rag/query", json=payload, headers=headers
+  )
+  response.raise_for_status()  # Ensure HTTP errors surface
+  print(response.json())
+  ```
+
+  Always include the `Authorization` header and check for non-200 responses to
+  handle errors gracefully.
+
 #### Frontend Components
 - **RAGInterface** (`frontend/components/rag-interface.tsx`)
   - Complete document upload interface
