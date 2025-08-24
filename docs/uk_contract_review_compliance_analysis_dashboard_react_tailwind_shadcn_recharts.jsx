@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Card,
   CardHeader,
@@ -70,6 +70,7 @@ import {
   ChevronRight,
   AlertTriangle,
 } from "lucide-react";
+import { api } from "@/lib/api";
 
 // ------------------ Types ------------------
 
@@ -92,103 +93,6 @@ type Issue = {
   recommendation: string;
   createdAt: string; // ISO
 };
-
-// ------------------ Mock Data ------------------
-
-const mockIssues: Issue[] = [
-  {
-    id: "ISS-1001",
-    docId: "DOC-ACME-MSA",
-    docName: "ACME × Blackletter — Master Services Agreement (v3)",
-    clausePath: "5.2 → Data Protection → International Transfers",
-    type: "GDPR",
-    citation: "UK GDPR Art. 44–49; DPA 2018 Part 2",
-    severity: "High",
-    confidence: 0.91,
-    status: "Open",
-    snippet:
-      "Supplier may transfer Customer Personal Data outside the UK without additional safeguards.",
-    recommendation:
-      "Add an international transfers clause requiring adequate safeguards (e.g., UK IDTA / Addendum, SCCs + A. Transfer Risk Assessment).",
-    createdAt: "2025-08-14T10:22:00Z",
-  },
-  {
-    id: "ISS-1002",
-    docId: "DOC-ACME-MSA",
-    docName: "ACME × Blackletter — Master Services Agreement (v3)",
-    clausePath: "5.5 → Data Protection → Subprocessors",
-    type: "GDPR",
-    citation: "UK GDPR Art. 28(2)-(4)",
-    severity: "Medium",
-    confidence: 0.84,
-    status: "In Review",
-    owner: "Omar",
-    snippet:
-      "Supplier may appoint any subprocessor without prior written authorisation.",
-    recommendation:
-      "Switch to prior written authorisation or at minimum provide a public subprocessor list + notice + right to object.",
-    createdAt: "2025-08-14T10:23:00Z",
-  },
-  {
-    id: "ISS-1003",
-    docId: "DOC-GAD-PA",
-    docName: "Government Agency — Processing Addendum",
-    clausePath: "2.3 → Confidentiality",
-    type: "Case Law",
-    citation: "Barclays Bank plc v Various Claimants [2020] UKSC 13 (vicarious liability scope)",
-    severity: "Low",
-    confidence: 0.73,
-    status: "Open",
-    snippet:
-      "The clause attempts to disclaim all liability for acts of employees and contractors.",
-    recommendation:
-      "Narrow liability carve-out; align with established principles on vicarious liability and statutory duties that cannot be excluded.",
-    createdAt: "2025-08-15T12:01:00Z",
-  },
-  {
-    id: "ISS-1004",
-    docId: "DOC-STARTUP-DPA",
-    docName: "Startup × Vendor — DPA",
-    clausePath: "7.1 → Data Subject Rights",
-    type: "Statute",
-    citation: "Data Protection Act 2018 s.45; UK GDPR Arts. 12–23",
-    severity: "High",
-    confidence: 0.88,
-    status: "Open",
-    snippet:
-      "Processor will assist with data subject requests at its discretion and may charge commercially reasonable fees.",
-    recommendation:
-      "Make assistance mandatory, within agreed timelines, and fee-free unless manifestly unfounded or excessive (with burden of proof).",
-    createdAt: "2025-08-13T09:10:00Z",
-  },
-];
-
-const mockDocs = [
-  { id: "DOC-ACME-MSA", name: "ACME × Blackletter — MSA (v3)", uploadedAt: "2025-08-14" },
-  { id: "DOC-GAD-PA", name: "Government Agency — Processing Addendum", uploadedAt: "2025-08-15" },
-  { id: "DOC-STARTUP-DPA", name: "Startup × Vendor — DPA", uploadedAt: "2025-08-13" },
-];
-
-const gdprCoverage = [
-  { article: "Art. 5 — Principles", status: "OK" },
-  { article: "Art. 6 — Lawfulness", status: "OK" },
-  { article: "Art. 28 — Processor", status: "GAP" },
-  { article: "Art. 32 — Security", status: "OK" },
-  { article: "Arts. 44–49 — Transfers", status: "GAP" },
-  { article: "Art. 30 — Records", status: "Partial" },
-];
-
-const statutesCoverage = [
-  { ref: "DPA 2018 Part 2", status: "Partial" },
-  { ref: "PECR 2003 (as amended)", status: "OK" },
-  { ref: "Consumer Rights Act 2015 (unfair terms)", status: "Review" },
-];
-
-const caseLawSignals = [
-  { case: "Barclays v Various Claimants [2020] UKSC 13", weight: 0.8 },
-  { case: "Lloyd v Google [2021] UKSC 50", weight: 0.7 },
-  { case: "NT1 & NT2 v Google [2018] EWCA Civ 799", weight: 0.6 },
-];
 
 // ------------------ Helpers ------------------
 
@@ -243,12 +147,49 @@ function riskColour(sev: Severity) {
 
 export default function LegalComplianceDashboard() {
   const [query, setQuery] = useState("");
-  const [issues, setIssues] = useState<Issue[]>(mockIssues);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [gdprCoverage, setGdprCoverage] = useState<any[]>([]);
+  const [statutesCoverage, setStatutesCoverage] = useState<any[]>([]);
+  const [caseLawSignals, setCaseLawSignals] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [dark, setDark] = useState(false);
   const [typeFilter, setTypeFilter] = useState<IssueType | "All">("All");
   const [severityFilter, setSeverityFilter] = useState<Severity | "All">("All");
   const [statusFilter, setStatusFilter] = useState<"All" | Issue["status"]>("All");
+
+  async function loadIssues() {
+    try {
+      setError(null);
+      setLoading(true);
+      const data = await api.getIssues();
+      setIssues(data);
+      if (data.length > 0) {
+        const docId = data[0].docId;
+        try {
+          const [gdpr, statute, caselaw] = await Promise.all([
+            api.gdprCoverage(docId),
+            api.statuteCoverage(docId),
+            api.caselaw(docId),
+          ]);
+          setGdprCoverage(gdpr.items);
+          setStatutesCoverage(statute.items);
+          setCaseLawSignals(caselaw.signals);
+        } catch (e) {
+          /* ignore coverage errors */
+        }
+      }
+    } catch (e) {
+      setError(e.message ?? "Failed to load issues");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadIssues();
+  }, []);
 
   const filteredIssues = useMemo(() => {
     return issues.filter((i) => {
@@ -302,23 +243,17 @@ export default function LegalComplianceDashboard() {
       .map(([date, count]) => ({ date, count }));
   }, [issues]);
 
-  function handleFakeAnalyze() {
-    // Placeholder for wiring to your backend. Simulates a new issue.
-    const newIssue: Issue = {
-      id: `ISS-${Math.floor(Math.random() * 9000) + 1000}`,
-      docId: "DOC-ACME-MSA",
-      docName: "ACME × Blackletter — MSA (v3)",
-      clausePath: "9.2 → Security → Breach Notification",
-      type: "GDPR",
-      citation: "UK GDPR Art. 33–34",
-      severity: "Medium",
-      confidence: 0.79,
-      status: "Open",
-      snippet: "Supplier shall notify without undue delay and in any case within a reasonable time.",
-      recommendation: "Replace vague timing with \"within 24 hours of becoming aware\" for processors; specify details to include.",
-      createdAt: new Date().toISOString(),
-    };
-    setIssues((prev) => [newIssue, ...prev]);
+  async function handleAnalyze() {
+    const fd = new FormData();
+    fd.append("doc_id", "DOC-UPLOAD");
+    fd.append("doc_name", "Uploaded Document");
+    try {
+      setError(null);
+      await api.analyze(fd);
+      await loadIssues();
+    } catch (e) {
+      setError(e.message ?? "Analyze failed");
+    }
   }
 
   function colourForStatus(status: Issue["status"]) {
@@ -350,7 +285,7 @@ export default function LegalComplianceDashboard() {
               <Button variant="outline" onClick={() => setDark((d) => !d)}>
                 {dark ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />} Theme
               </Button>
-              <Button onClick={handleFakeAnalyze}>
+              <Button onClick={handleAnalyze}>
                 <Sparkles className="mr-2 h-4 w-4" /> Analyze
               </Button>
               <Button variant="secondary">
@@ -440,27 +375,21 @@ export default function LegalComplianceDashboard() {
 
               <Separator />
 
-              <div>
-                <Label className="mb-1 block">Documents</Label>
-                <div className="space-y-2">
-                  {mockDocs.map((d) => (
-                    <div key={d.id} className="flex items-center justify-between rounded-lg border p-2 text-sm dark:border-neutral-800">
-                      <div className="max-w-[70%] truncate">
-                        <div className="font-medium">{d.name}</div>
-                        <div className="text-xs text-neutral-500">Uploaded {d.uploadedAt}</div>
-                      </div>
-                      <Button variant="outline" size="sm" className="text-xs">
-                        <FileText className="mr-2 h-3 w-3" /> Open
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* TODO: Replace with real docs endpoint; hidden for now */}
             </CardContent>
           </Card>
 
           {/* Main Grid */}
           <div className="space-y-4 lg:col-span-3">
+            {error && (
+              <div className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">{error}</div>
+            )}
+            {loading ? (
+              <Card>
+                <CardContent className="p-4 text-sm">Loading issues…</CardContent>
+              </Card>
+            ) : (
+              <>
             {/* KPIs */}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <Card>
@@ -605,7 +534,7 @@ export default function LegalComplianceDashboard() {
                     <Button variant="outline" onClick={() => downloadCSV(filteredIssues)}>
                       <Download className="mr-2 h-4 w-4" /> Export CSV
                     </Button>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={loadIssues}>
                       <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                     </Button>
                   </div>
@@ -747,9 +676,10 @@ export default function LegalComplianceDashboard() {
                   </Table>
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            </>
+            )}
           </div>
-        </div>
 
         {/* Drawer: Quick View */}
         <Drawer open={!!selectedIssue} onOpenChange={(o) => !o && setSelectedIssue(null)}>
