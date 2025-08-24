@@ -40,6 +40,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 relative overflow-hidden">
+      {/* Tailwind Test - Remove this after verification */}
+      <div className="bg-red-500 text-white p-4 text-xl font-bold text-center">
+        🔥 TEST: If you see red background, Tailwind is working!
+      </div>
+      
       {/* Background pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5Qzk2Q0EiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJtMzYgMzQgNi0ydjEwbC02IDJ6bTAgNCA2LTJ2MTBsLTYgMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
       

@@ -2,16 +2,11 @@ services:
   # Static Site (Frontend)
   - type: static_site
     name: blackletter-frontend
-    buildCommand: chmod +x build.sh && ./build.sh
+    buildCommand: cd frontend && npm ci && npm run build
     publishPath: ./frontend/out
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: blackletter-api
-          type: web
-          property: url
     autoDeploy: true
     domains:
       - blackletter.onrender.com
