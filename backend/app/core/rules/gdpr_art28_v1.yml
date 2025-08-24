@@ -1,0 +1,7 @@
+- id: breach_notification_72h
+  law: "UK GDPR Art. 33"
+  requirement: "Processor must notify controller without undue delay and ideally within 72 hours"
+  flags:
+    - patterns: ["within a reasonable time", "notify promptly"]
+      severity: "High"
+      recommendation: "Replace with 'without undue delay and in any case within 72 hours'"

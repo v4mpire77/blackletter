@@ -247,3 +247,28 @@ export async function queryRAG(query: string, docId?: string, topK: number = 5) 
   
   return await response.json();
 }
+
+/** Review API */
+export async function postReview(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${API_URL}/api/review`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) throw new Error(`Review failed: ${response.statusText}`);
+  return await response.json();
+}
+
+export async function getReview(jobId: string) {
+  const response = await fetch(`${API_URL}/api/review/${jobId}`);
+  if (!response.ok) throw new Error(`Status failed: ${response.statusText}`);
+  return await response.json();
+}
+
+export async function getReviewReport(jobId: string, format: "html" | "pdf" = "html") {
+  const path = format === "pdf" ? `${API_URL}/api/review/${jobId}/report.pdf` : `${API_URL}/api/review/${jobId}/report`;
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Report download failed: ${response.statusText}`);
+  return response;
+}
