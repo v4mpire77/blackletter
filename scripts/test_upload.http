@@ -1,16 +1,12 @@
 ### Test contract review endpoint
-POST http://localhost:8000/api/contracts
+POST http://localhost:8000/api/review
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
 ------WebKitFormBoundary
 Content-Disposition: form-data; name="file"; filename="test.pdf"
 Content-Type: application/pdf
 
-< ../src/backend/tests/fixtures/uk_nda.pdf
+< ../backend/tests/fixtures/uk_nda.pdf
 ------WebKitFormBoundary--
-
-### Use returned id to fetch findings
-@id = REPLACE_WITH_ID
-GET http://localhost:8000/api/contracts/{{id}}/findings
 
 ### Test health check
 GET http://localhost:8000/health

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 """FastAPI router exports for convenience.
 
 This module collects the individual routers defined in this package and
@@ -39,3 +40,8 @@ if dashboard_router:
 
 if ocr_router:
     __all__.extend(["ocr", "ocr_router"])
+=======
+from .contracts import router
+
+__all__ = ["router"]
+>>>>>>> Stashed changes

@@ -1,127 +1,71 @@
-# Blackletter Systems
+# Blackletter Systems - AI Contract Review
 
-*Old rules. New game.*
+Simple, fast contract review using AI. Upload → Extract → Summarise → Show risks.
 
-Blackletter Systems is a practical legal automation platform designed to streamline contract analysis, compliance checking, and legal research.
+## Quick Start (Windows)
 
-## Core Features
+### Backend Setup
 
-1. **AI Contract Review** – Upload → OCR → clause detect → risk score vs YAML playbook → redlines + summary
-2. **Compliance Checklist** – Ingest ICO/FCA/EU/gov feeds → summarize → sector checklists → weekly PDF/email
-3. **Research Assistant (RAG)** – Semantic search over BAILII + legislation.gov.uk → answers with paragraph-level citations
-
-## Tech Stack
-
-### Frontend
-- Next.js 14 with TypeScript
-- Tailwind CSS + shadcn/ui
-
-### Backend
-- FastAPI with Python 3.11
-- NLP Libraries: Transformers, spaCy, NLTK
-
-### Database
-- PostgreSQL for structured data
-- ChromaDB/Weaviate for vector storage
-
-### Additional Tools
-- AI/ML: OpenAI API, Google Gemini API, Ollama (local LLMs)
-- Deployment: Render
-- Automation: n8n for workflows and integrations
-
-## Getting Started
-
-### Prerequisites
-- Windows 11 (Developer Mode ON)
-- Docker Desktop
-- Git
-- Node.js 20+
-- Python 3.11
-- Tesseract OCR (`choco install tesseract`)
-- Ollama (optional for local LLMs)
-
-### Quick Start
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/blackletter-systems.git
-   cd blackletter-systems
-   ```
-
-2. Run the startup script:
-   ```
-   .\start.ps1
-   ```
-
-   This will:
-   - Create a `.env` file if needed
-   - Start required Docker containers
-   - Set up Python virtual environment
-   - Install dependencies
-   - Start backend and frontend servers
-
-3. Access the application:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - API docs: http://localhost:8000/docs
-   - MinIO Console: http://localhost:9001 (admin/adminadmin)
-   - n8n: http://localhost:5678 (admin/adminadmin)
-
-## Project Structure
-
-```
-blackletter/
-  src/
-    backend/
-      app/
-        routers/       # API endpoints
-        core/          # Core functionality adapters
-        services/      # Business logic
-        models/        # Data models
-      main.py
-      requirements.txt
-  frontend/
-    app/               # Next.js pages
-    components/        # React components
-    lib/               # Utility functions
-  n8n/
-    workflows/         # n8n automation workflows
-  docs/
-    PLAYBOOK_SAMPLE.yaml  # Contract review rules
-  docker-compose.yml
-  .env.example
+```powershell
+cd blackletter\backend
+python -m venv ..\.venv
+. ..\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+setx OPENAI_API_KEY "<YOUR_KEY>"
+uvicorn main:app --reload --port 8000
 ```
 
-## Documentation
+### Frontend Setup
 
+<<<<<<< Updated upstream
 - [Implementation Plan](docs/Implementation.md)
 - [Project Structure](docs/project_structure.md)
 - [UI/UX Design](docs/UI_UX_doc.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Copilot Instructions](docs/COPILOT_INSTRUCTIONS.md)
 - [Context Engineering Workflow](docs/AGENT_CONTEXT_ENGINEERING_WORKFLOW.md)
+=======
+```powershell
+cd frontend
+npm install
+setx NEXT_PUBLIC_API_URL "http://localhost:8000"
+npm run dev
+```
+>>>>>>> Stashed changes
 
-## Deployment
+## System Constraints
 
-The application can be deployed to [Render.com](https://render.com) using the provided configuration:
+- Max file size: 10MB
+- File type: PDF only
+- Text limit: ~6,000 chars (for LLM processing)
 
-1. Run the deployment script:
-   ```
-   # Windows
-   .\deploy.ps1
-   
-   # Linux/macOS
-   ./deploy.sh
-   ```
+## How We Build
 
-2. Follow the prompts to log in to Render and deploy the application.
+✅ Ship the smallest slice: upload → extract → summarise → show.
+✅ Windows-only instructions.
+✅ Clear errors, simple UI, one happy path.
+❌ Don't add auth/payments yet.
+❌ Don't attempt OCR or RAG today.
+❌ Don't over-engineer file storage.
 
-3. Once deployed, your application will be available at:
-   - Frontend: `https://blackletter.onrender.com`
-   - API: `https://blackletter-api.onrender.com`
+## Testing
 
-For detailed deployment instructions, see [Deployment Guide](docs/DEPLOYMENT_GUIDE.md).
+Use the provided `scripts/test_upload.http` with VS Code REST Client extension to test the API directly:
 
-## License
+```http
+POST http://localhost:8000/api/review
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="test.pdf"
+Content-Type: application/pdf
 
-[MIT License](LICENSE)
+< ./test.pdf
+------WebKitFormBoundary--
+```
+
+## Next Steps
+
+1. Add clause heuristics (termination, assignment, rent review, liability)
+2. Redline docx export
+3. Add playbook YAML and score risks against it
+4. Logging + basic analytics
