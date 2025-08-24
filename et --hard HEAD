@@ -1,5 +1,0 @@
-[33m993b353[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix formatting and whitespace in schemas.py and gdpr_rules.json
-[33m1f5b25d[m Merge remote-tracking branch 'origin/main' - Resolve conflicts in schemas.py and gdpr_rules.json - Combine enhanced data models and comprehensive GDPR rules - Maintain backward compatibility while adding new features
-[33mb1cbde7[m Implement comprehensive security framework and RAG analyzer improvements - Add security core modules (security.py, security_config.py) - Enhance RAG analyzer service with improved error handling - Update API routers with security integration - Add frontend authentication components and protected routes - Include comprehensive documentation and framework validation tools - Update dependencies and configuration files
-[33m1151150[m feat(auth): Supabase Auth integration \u2013 frontend client + login; backend JWT verify; protect RAG upload; add structured logs; deps update
-[33mabfa344[m Add repository audit and next steps document

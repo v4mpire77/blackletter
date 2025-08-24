@@ -2,10 +2,10 @@
 * @blackletter-systems/core-team
 
 # Backend specific
-/backend/ @blackletter-systems/backend-team
-/backend/app/ @blackletter-systems/backend-team
-/backend/tests/ @blackletter-systems/backend-team
-/backend/requirements.txt @blackletter-systems/backend-team
+/src/backend/ @blackletter-systems/backend-team
+/src/backend/app/ @blackletter-systems/backend-team
+/src/backend/tests/ @blackletter-systems/backend-team
+/src/backend/requirements.txt @blackletter-systems/backend-team
 
 # Frontend specific
 /frontend/ @blackletter-systems/frontend-team

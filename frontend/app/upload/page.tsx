@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Navigation } from '@/components/navigation';
+import { Navigation } from '@/components/Navigation';
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);

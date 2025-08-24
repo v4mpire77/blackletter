@@ -34,8 +34,8 @@ fi
 echo "✅ render.yaml found"
 
 # Check backend requirements
-if [ ! -f "backend/requirements.txt" ]; then
-    echo "❌ backend/requirements.txt not found"
+if [ ! -f "src/backend/requirements.txt" ]; then
+    echo "❌ src/backend/requirements.txt not found"
     exit 1
 fi
 

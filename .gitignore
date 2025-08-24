@@ -34,3 +34,18 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files and logs
+*.tmp
+*.temp
+*.log
+*_output.txt
+*_subproc.txt
+*_verbose.txt
+rag_eval_*.txt
+
+# Git artifacts (prevent accidental commits)
+*--name-only*
+*--hard*
+*Desktop*Blackletter*
+*ersomarDesktop*
