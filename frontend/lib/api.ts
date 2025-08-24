@@ -5,6 +5,11 @@ import { createSupabaseClient } from './supabase'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+async function json<T>(res: Response): Promise<T> {
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
 /**
  * Get auth headers for API requests
  */
@@ -247,3 +252,15 @@ export async function queryRAG(query: string, docId?: string, topK: number = 5) 
   
   return await response.json();
 }
+
+export const api = {
+  getIssues: () => fetch(`${API_URL}/api/issues`, { cache: 'no-store' }).then(json),
+  analyze: (form: FormData) =>
+    fetch(`${API_URL}/api/analyze`, { method: 'POST', body: form }).then(json),
+  gdprCoverage: (docId: string) =>
+    fetch(`${API_URL}/api/gdpr-coverage?docId=${encodeURIComponent(docId)}`).then(json),
+  statuteCoverage: (docId: string) =>
+    fetch(`${API_URL}/api/statute-coverage?docId=${encodeURIComponent(docId)}`).then(json),
+  caselaw: (docId: string) =>
+    fetch(`${API_URL}/api/caselaw?docId=${encodeURIComponent(docId)}`).then(json),
+};

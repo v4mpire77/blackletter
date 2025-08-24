@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import contracts, compliance, research
+from app.routers import contracts, compliance, research, issues
 
 app = FastAPI(
     title="Blackletter Systems API",
@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(contracts.router, prefix="/contracts", tags=["contracts"])
 app.include_router(compliance.router, prefix="/compliance", tags=["compliance"])
 app.include_router(research.router, prefix="/research", tags=["research"])
+app.include_router(issues.router)
 
 @app.get("/health")
 async def health_check():
@@ -31,3 +32,4 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
