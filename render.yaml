@@ -11,7 +11,7 @@ services:
     domains:
       - blackletter.onrender.com
 
-  # API service (Backend)
+  # API service (Backend) - No custom domain, will use auto-generated URL
   - type: web
     name: blackletter-api
     runtime: python
@@ -20,26 +20,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: DATABASE_URL
-        fromDatabase:
-          name: blackletter-db
-          property: connectionString
-      - key: S3_ENDPOINT
-        value: https://s3.amazonaws.com
-      - key: S3_BUCKET
-        value: blackletter-prod
-      - key: VECTOR_PROVIDER
-        value: weaviate
-      - key: LLM_PROVIDER
-        value: openai
-      - key: S3_ACCESS_KEY
-        sync: false
-      - key: S3_SECRET_KEY
-        sync: false
       - key: OPENAI_API_KEY
         sync: false
     autoDeploy: true
-    healthCheckPath: /health
     plan: free
 
 # Database

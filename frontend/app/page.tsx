@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+// DEPLOYMENT TRIGGER: Force new deployment - 2025-08-24
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
