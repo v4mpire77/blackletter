@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-<<<<<<< HEAD
     "target": "es5",
     "lib": ["dom", "dom.iterable", "es6"],
     "allowJs": true,
@@ -14,24 +13,6 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-=======
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": false,
-    "noEmit": true,
-    "incremental": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
->>>>>>> 47931f5adb3b90222b8a8032099a98d6ea0d662a
     "plugins": [
       {
         "name": "next"
@@ -39,33 +20,19 @@
     ],
     "baseUrl": ".",
     "paths": {
-<<<<<<< HEAD
       "@/*": ["./*"],
       "@/components/*": ["./components/*"],
       "@/lib/*": ["./lib/*"],
       "@/app/*": ["./app/*"]
-=======
-      "@/*": ["./*"]
->>>>>>> 47931f5adb3b90222b8a8032099a98d6ea0d662a
     }
   },
   "include": [
     "next-env.d.ts",
-<<<<<<< HEAD
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-=======
-    ".next/types/**/*.ts",
-    "**/*.ts",
-    "**/*.tsx"
->>>>>>> 47931f5adb3b90222b8a8032099a98d6ea0d662a
   ],
   "exclude": [
     "node_modules"
   ]
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 47931f5adb3b90222b8a8032099a98d6ea0d662a

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * Blackletter GDPR Processor - Root Layout
  * Context Engineering Framework v2.0.0 Compliant
@@ -16,20 +15,10 @@ export const metadata: Metadata = {
   authors: [{ name: 'Blackletter Systems' }],
   viewport: 'width=device-width, initial-scale=1',
 };
-=======
-import type { Metadata } from 'next'
-import './globals.css'
-
-export const metadata: Metadata = {
-  title: 'Blackletter Systems',
-  description: 'AI Contract Review System - Old rules. New game.',
-}
->>>>>>> 47931f5adb3b90222b8a8032099a98d6ea0d662a
 
 export default function RootLayout({
   children,
 }: {
-<<<<<<< HEAD
   children: React.ReactNode;
 }) {
   return (
@@ -83,13 +72,3 @@ export default function RootLayout({
     </html>
   );
 }
-=======
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  )
-}
->>>>>>> 47931f5adb3b90222b8a8032099a98d6ea0d662a
