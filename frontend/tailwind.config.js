@@ -42,24 +42,25 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        chart: {
-          "1": "hsl(var(--chart-1))",
-          "2": "hsl(var(--chart-2))",
-          "3": "hsl(var(--chart-3))",
-          "4": "hsl(var(--chart-4))",
-          "5": "hsl(var(--chart-5))",
-        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-      },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/forms")],
+  plugins: [
+    function({ addUtilities }) {
+      addUtilities({
+        '.animate-accordion-down': {
+          'animation': 'accordion-down 0.2s ease-out',
+        },
+        '.animate-accordion-up': {
+          'animation': 'accordion-up 0.2s ease-out',
+        },
+      })
+    },
+    require('@tailwindcss/forms'),
+  ],
 }
