@@ -1,10 +1,9 @@
 services:
-  # Web service (Frontend)
-  - type: web
+  # Static Site (Frontend)
+  - type: static_site
     name: blackletter-frontend
-    runtime: node
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: cd frontend && npm start
+    publishPath: ./frontend/out
     envVars:
       - key: NODE_ENV
         value: production
@@ -14,8 +13,6 @@ services:
           type: web
           property: url
     autoDeploy: true
-    healthCheckPath: /app
-    plan: free
     domains:
       - blackletter.onrender.com
 

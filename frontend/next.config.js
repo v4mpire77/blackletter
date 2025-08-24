@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Use regular Next.js build instead of static export
-  // output: 'export', // Commented out for Render deployment
+  // Enable static export for Render deployment
+  output: 'export',
   trailingSlash: true,
-  // Enable image optimization
+  // Disable image optimization for static export
   images: {
-    domains: ['localhost'],
+    unoptimized: true,
   },
   // Ensure proper asset handling
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',

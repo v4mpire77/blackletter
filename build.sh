@@ -8,7 +8,7 @@ cd frontend
 
 # Install dependencies
 echo "📦 Installing dependencies..."
-npm ci --only=production
+npm ci
 
 # Build the application
 echo "🔨 Building Next.js application..."
