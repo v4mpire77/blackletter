@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal, Dict, Any
+from enum import Enum
 
 Severity = Literal["High", "Medium", "Low"]
 IssueType = Literal["GDPR", "Statute", "Case Law"]
@@ -27,3 +28,25 @@ class ReviewResult(BaseModel):
     redlines: Dict[str, Any] = {}
     next_actions: List[str] = []
     issues: List[Issue] = []
+
+
+class JobState(str, Enum):
+    QUEUED = "queued"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class JobStatus(BaseModel):
+    """Response model for background processing jobs."""
+
+    job_id: int = Field(..., description="Unique identifier for the job")
+    status: JobState = Field(..., description="Current status of the job")
+
+
+class JobCreationResponse(JobStatus):
+    pass
+
+
+class JobStatusResponse(JobStatus):
+    pass
