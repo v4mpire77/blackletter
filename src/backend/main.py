@@ -1,33 +1,19 @@
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 
-from app.routers import contracts, compliance, research
+from backend.core.config import settings
+from backend.routers import jobs
 
 app = FastAPI(
-    title="Blackletter Systems API",
-    description="API for legal document analysis and compliance checking",
-    version="0.1.0",
+    title=settings.APP_NAME,
+    description="API for submitting and tracking contract analysis jobs.",
+    version="1.0.0",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-# Include routers
-app.include_router(contracts.router, prefix="/contracts", tags=["contracts"])
-app.include_router(compliance.router, prefix="/compliance", tags=["compliance"])
-app.include_router(research.router, prefix="/research", tags=["research"])
+@app.get("/", tags=["Health Check"])
+async def root() -> dict[str, str]:
+    return {"status": "ok", "message": f"Welcome to the {settings.APP_NAME}"}
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+app.include_router(jobs.router, prefix=f"{settings.API_V1_STR}/jobs", tags=["Jobs"])
