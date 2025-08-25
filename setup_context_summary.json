@@ -1,0 +1,125 @@
+{
+  "task_analysis": {
+    "description": "Create a comprehensive setup checklist that ensures 95% certainty that the system will fully run before making changes",
+    "type": "ai_ml",
+    "complexity": "MEDIUM",
+    "estimated_effort": "4-8 hours"
+  },
+  "documentation_references": {
+    "implementation": {
+      "path": "docs/Implementation.md",
+      "required": true,
+      "purpose": "Overall project plan and implementation stages"
+    },
+    "project_structure": {
+      "path": "docs/project_structure.md",
+      "required": true,
+      "purpose": "File organization and architecture guidelines"
+    },
+    "ui_ux": {
+      "path": "docs/UI_UX_doc.md",
+      "required": true,
+      "purpose": "Design system and accessibility standards"
+    },
+    "bug_tracking": {
+      "path": "docs/Bug_tracking.md",
+      "required": true,
+      "purpose": "Known issues and resolution workflows"
+    },
+    "rag_plan": {
+      "path": "docs/RAG_INTEGRATION_PLAN.md",
+      "required": false,
+      "priority": "HIGH"
+    },
+    "ce_workflow": {
+      "path": "docs/AGENT_CONTEXT_ENGINEERING_WORKFLOW.md",
+      "required": true,
+      "priority": "HIGH",
+      "purpose": "Mandatory workflow sequence for all tasks"
+    },
+    "ce_quick_ref": {
+      "path": "docs/AGENT_CE_QUICK_REFERENCE.md",
+      "required": true,
+      "priority": "HIGH",
+      "purpose": "Quick reference for Context Engineering workflow"
+    },
+    "ce_enforcement": {
+      "path": "docs/AGENT_CE_ENFORCEMENT.md",
+      "required": true,
+      "priority": "HIGH",
+      "purpose": "How to enforce the Context Engineering workflow"
+    },
+    "ce_system_prompt": {
+      "path": "docs/AGENT_CE_SYSTEM_PROMPT.md",
+      "required": true,
+      "priority": "HIGH",
+      "purpose": "System prompt template for AI agents"
+    }
+  },
+  "implementation_guide": {
+    "workflow_steps": [
+      "1. Context Assessment - Review all relevant documentation",
+      "2. Implementation Plan - Create detailed implementation plan",
+      "3. Implementation - Follow established patterns and architecture",
+      "4. Documentation - Update code and documentation concurrently",
+      "5. Verification - Check against quality standards and checklist"
+    ],
+    "file_placement": {
+      "general": "Follow project structure in docs/project_structure.md",
+      "documentation": "docs/",
+      "scripts": "scripts/ or tools/"
+    },
+    "naming_conventions": {
+      "general": "Follow language-specific conventions",
+      "files": "Use descriptive, lowercase names with appropriate separators"
+    },
+    "testing_requirements": {
+      "coverage": "80%+ for new code",
+      "unit_tests": "Required for all functions and methods",
+      "integration_tests": "Required for API endpoints and workflows",
+      "edge_cases": "Test error conditions and boundary cases"
+    },
+    "code_quality": {
+      "documentation": "Include docstrings and comments for complex logic",
+      "error_handling": "Implement proper error handling and logging",
+      "type_safety": "Use type hints where applicable",
+      "formatting": "Follow language-specific formatting standards"
+    }
+  },
+  "quality_requirements": {
+    "testing": {
+      "coverage": "80%+",
+      "types": [
+        "unit",
+        "integration",
+        "edge_case"
+      ]
+    },
+    "documentation": {
+      "code_docs": "Required",
+      "api_docs": "Required for backend tasks",
+      "user_docs": "Required for frontend tasks"
+    },
+    "performance": {
+      "response_time": "< 2 seconds for API calls",
+      "file_size": "< 10MB for uploads",
+      "memory": "Efficient memory usage"
+    },
+    "security": {
+      "input_validation": "Required",
+      "authentication": "Required for protected endpoints",
+      "data_encryption": "Required for sensitive data"
+    }
+  },
+  "workflow_checklist": [
+    "\u2705 All relevant documentation reviewed",
+    "\u2705 Implementation plan created",
+    "\u2705 Code follows established patterns",
+    "\u2705 Tests implemented and passing",
+    "\u2705 Documentation updated",
+    "\u2705 Code meets quality standards",
+    "\u2705 No NEVER rules violated",
+    "\u2705 All ALWAYS rules followed"
+  ],
+  "generated_at": "2025-08-25T00:06:25.617450"
+}

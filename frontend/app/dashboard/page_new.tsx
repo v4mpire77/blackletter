@@ -239,7 +239,7 @@ export default function Dashboard() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Issue Type</Label>
-                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+                <Select value={typeFilter} onValueChange={(v: string) => setTypeFilter(v as any)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All" />
                   </SelectTrigger>
@@ -254,7 +254,7 @@ export default function Dashboard() {
 
               <div className="space-y-2">
                 <Label>Severity</Label>
-                <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as any)}>
+                <Select value={severityFilter} onValueChange={(v: string) => setSeverityFilter(v as any)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All" />
                   </SelectTrigger>
@@ -269,7 +269,7 @@ export default function Dashboard() {
 
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <Select value={statusFilter} onValueChange={(v: string) => setStatusFilter(v as any)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All" />
                   </SelectTrigger>

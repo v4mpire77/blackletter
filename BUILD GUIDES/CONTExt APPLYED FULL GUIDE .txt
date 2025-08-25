@@ -1,0 +1,109 @@
+Part 1: Technical Build Guide for the Blackletter Repository
+Overview
+The Blackletter AI Contract Review platform is an end-to-end system for automating compliance reviews of vendor contracts, specifically tailored for UK/EU firms. It ingests contract documents (PDF/DOCX), identifies required GDPR clauses, flags vague terms, and produces a clear, risk-aware summary with actionable next steps.
+The architecture is designed as a full-stack, production-oriented platform with privacy-by-design defaults—processing data in isolated chunks, minimizing sensitive data exposure, and honoring deletion requests. This guide details the build-out of each component as defined in the blackletter repository structure.
+Tech Stack Summary:
+ * Frontend: Next.js 14 (React) with Tailwind CSS and shadcn/ui.
+ * Backend (AI/Compliance API): FastAPI (Python), leveraging its async capabilities.
+ * Asynchronous Workers: Celery with a Redis broker for background processing.
+ * Document Processing: Libraries like PyMuPDF and python-docx for text extraction, with Tesseract for OCR.
+ * Core Logic Modules (in backend/services/):
+   * GDPR Rule Engine: A configurable engine using YAML playbooks from backend/rules/.
+   * RAG Indexer: A Retrieval-Augmented Generation pipeline for semantic search using vector embeddings.
+   * LLM Judge: An LLM-based component to assess compliance with source citations.
+ * Persistence: PostgreSQL with the pgvector extension for hybrid data and vector storage.
+ * Infrastructure: Docker for containerization and Terraform for IaC, configured in the infra/ directory.
+ * Observability & Security: A roadmap including OpenTelemetry, structured logging, and Vault for secrets management.
+1. Frontend - Next.js User Interface
+The frontend, located in the frontend/ directory, is built with Next.js 14 and the App Router. It provides an intuitive UI for users to upload contracts, monitor processing status, and view compliance reports on their dashboard.
+Project Structure:
+The repository's frontend structure is organized as follows:
+frontend/
+├── app/
+│   ├── upload/page.tsx         # Contract upload UI
+│   ├── dashboard/page.tsx      # Main compliance dashboard
+│   ├── compliance/page.tsx     # Detailed checklist UI
+│   └── research/page.tsx         # Case law RAG UI
+├── components/                 # Reusable UI components (e.g., UploadDropzone)
+└── lib/
+    └── api.ts                  # API client for backend communication
+
+Key Implementation Details:
+ * Contract Upload: The upload/page.tsx component will handle file uploads, posting the data to the backend's /review endpoint. It should provide immediate user feedback, such as progress bars and a "processing" state, before redirecting to the dashboard.
+ * API Communication: The frontend/lib/api.ts file will manage all fetch requests to the FastAPI backend. The NEXT_PUBLIC_API_URL environment variable must be configured to point to the correct backend address (e.g., http://localhost:8000 for local development).
+ * Displaying Results: The dashboard/page.tsx and compliance/page.tsx components will poll the backend's /jobs/{job_id}/status endpoint. Once analysis is complete, they will fetch the full results and render the compliance findings. A library like TipTap can be integrated to display contract excerpts with highlights and annotations for flagged issues.
+2. Backend - FastAPI AI/Compliance API
+The backend, located in the backend/ directory, is a high-performance FastAPI application that serves as the brain of the platform. It handles API requests, manages jobs, and orchestrates the analysis pipeline.
+Project Structure:
+backend/
+├── main.py                     # FastAPI app entrypoint
+├── routers/
+│   ├── contracts.py            # Endpoints for contract submission & review
+│   ├── compliance.py           # Endpoints for compliance data
+│   └── research.py             # Endpoints for RAG-based research
+├── services/
+│   ├── ingest.py               # Document parsing and OCR logic
+│   ├── rules_engine.py         # GDPR rule-checking logic
+│   ├── rag.py                  # Chunking, embedding, and indexing
+│   └── llm_judge.py            # LLM interaction and compliance judgment
+├── models/
+│   ├── schemas.py              # Pydantic models for API data contracts
+│   └── db.py                   # SQLAlchemy ORM models
+└── rules/
+    └── gdpr_playbook.yaml      # Default GDPR rules definitions
+
+API Endpoints & Data Flow:
+ * Ingestion (POST /api/v1/jobs/):
+   * The endpoint, defined in routers/contracts.py, receives the file upload.
+   * Action: It immediately streams the file to a persistent object store (S3/Minio), generating a UUID-based key. Gap Alert: This is a critical step to move away from using /tmp.
+   * A job record is created in the PostgreSQL database with status: "queued".
+   * A Celery task is dispatched with the job_id.
+   * The API returns a 2022 Accepted response with a Location header pointing to the status endpoint (e.g., /api/v1/jobs/{job_id}/status).
+ * Status Polling (GET /api/v1/jobs/{job_id}/status):
+   * The frontend uses this endpoint to check the job's progress (queued, processing, completed, failed).
+ * Result Retrieval (GET /api/v1/jobs/{job_id}/result):
+   * Once the job is completed, this endpoint returns the full analysis report from the database.
+Database Interaction:
+ * Async Everywhere: A key architectural principle is the use of asynchronous database operations. All database logic, defined in modules like models/db.py and used in the routers, must use an async driver (asyncpg) and SQLAlchemy's async session. This is a top priority for production readiness.
+ * Multi-Tenancy: The database schema is designed for multi-tenancy. Every relevant table (e.g., jobs, contract_chunks) must include a tenant_id or org_id column. All database queries must be scoped by this ID to ensure strict data isolation.
+3. Workers - Asynchronous Task Processing
+The workers/ directory contains the Celery application and task definitions. These workers handle all the heavy lifting, ensuring the API remains responsive.
+The process_contract Task:
+This is the main Celery task that orchestrates the entire analysis pipeline.
+ * Fetch Job: The worker retrieves the job details from the database using the job_id.
+ * Update Status: The job status is set to processing.
+ * Document Ingestion (services/ingest.py):
+   * The contract file is downloaded from object storage.
+   * Text is extracted using PyMuPDF or python-docx.
+   * If necessary, OCR is performed using Tesseract.
+ * Rule Engine (services/rules_engine.py):
+   * The extracted text is scanned against the regex patterns defined in rules/gdpr_playbook.yaml. Initial findings (e.g., missing clauses, vague terms) are recorded.
+ * RAG Indexing (services/rag.py):
+   * The text is split into logical chunks.
+   * Each chunk is converted into a vector embedding using a pre-trained model.
+   * The embeddings and corresponding text are stored in the PostgreSQL contract_chunks table using pgvector.
+ * LLM Judge (services/llm_judge.py):
+   * For each compliance requirement, the worker performs a similarity search in the vector index to retrieve the most relevant contract chunks.
+   * These chunks are sent to an LLM (e.g., GPT-4) with a structured prompt asking for a compliance judgment.
+   * The LLM's response, including direct citations from the contract text, is parsed and stored.
+ * Report Generation & Finalization:
+   * All findings are compiled into a structured report (JSON in the database).
+   * A downloadable PDF version is generated.
+   * The job status is updated to completed.
+4. Infrastructure & Deployment
+The infra/ directory contains the configuration for deploying and running the entire stack.
+Local Development (infra/docker-compose.yml):
+The docker-compose.yml file orchestrates a complete local development environment, including:
+ * backend: The FastAPI application.
+ * frontend: The Next.js development server.
+ * worker: The Celery worker process.
+ * db: A PostgreSQL database instance.
+ * redis: The Celery message broker.
+ * minio: An S3-compatible object store for local file handling.
+Production Deployment:
+ * Containerization: The Dockerfile for each service (backend, frontend, worker) ensures a consistent and reproducible build.
+ * IaC: Terraform scripts will be used to provision cloud infrastructure (e.g., on AWS or Azure), including managed PostgreSQL, Redis, and S3.
+ * Security:
+   * Secrets Management: All sensitive keys (DB URLs, API keys) must be managed through environment variables or a service like HashiCorp Vault, never hardcoded. Pydantic Settings in the backend helps enforce this.
+   * Authentication: Before public deployment, API endpoints must be secured using JWT/OAuth2.
+   * File Security: Implement and enforce file size/type validation and malware scanning as a priority.

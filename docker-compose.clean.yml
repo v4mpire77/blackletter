@@ -1,0 +1,117 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: blackletter_frontend
+    env_file:
+      - ./frontend/.env.local
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: blackletter_backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - supabase-db
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+      - /app/venv
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: blackletter_celery
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - redis
+    command: celery -A workers.celery_app worker --loglevel=info
+    volumes:
+      - ./backend:/app
+      - /app/venv
+    environment:
+      - CELERY_WORKER=true
+
+  redis:
+    image: redis:7-alpine
+    container_name: blackletter_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  supabase-db:
+    image: supabase/postgres:15.1.0.63
+    container_name: blackletter_supabase_db
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "54322:5432"
+    volumes:
+      - supabase_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  supabase-auth:
+    image: supabase/gotrue:v2.57.1
+    container_name: blackletter_supabase_auth
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:yourpassword@supabase-db:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_JWT_SECRET: supersecret
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_API_HOST: 0.0.0.0
+    ports:
+      - "9999:9999"
+
+volumes:
+  redis_data:
+    driver: local
+  supabase_data:
+    driver: local
+
+networks:
+  default:
+    name: blackletter_network
+    driver: bridge
