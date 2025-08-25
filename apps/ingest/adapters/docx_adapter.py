@@ -1,13 +1,12 @@
 from typing import List
-from docx import Document
 
+from ..document_ingestion import extract_text_from_docx, redact_pii
 from ..models import ContractChunk
-from ..utils import split_into_sections, count_tokens, new_id
+from ..utils import count_tokens, new_id, split_into_sections
 
 
 def ingest(path: str, contract_id: str) -> List[ContractChunk]:
-    doc = Document(path)
-    text = "\n".join(p.text for p in doc.paragraphs)
+    text = redact_pii(extract_text_from_docx(path))
     chunks: List[ContractChunk] = []
     for section, section_text in split_into_sections(text):
         chunk = ContractChunk(
