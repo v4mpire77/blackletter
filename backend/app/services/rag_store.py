@@ -126,6 +126,15 @@ class RAGStore:
         # Sort by similarity and return top-k
         similarities.sort(key=lambda x: x[1], reverse=True)
         return similarities[:top_k]
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Return basic statistics about the stored chunks and documents."""
+        doc_ids = {chunk.doc_id for chunk in self.chunks.values()}
+        return {
+            "total_chunks": len(self.chunks),
+            "total_documents": len(doc_ids),
+            "document_ids": list(doc_ids),
+        }
     
     def get_context_around_chunk(self, chunk_id: str, context_chunks: int = 2) -> str:
         """
