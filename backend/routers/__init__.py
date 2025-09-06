@@ -1,5 +1,4 @@
 """FastAPI router exports for convenience."""
-
 from . import contracts, dashboard, gemini, jobs, ocr, rag
 
 __all__ = [
