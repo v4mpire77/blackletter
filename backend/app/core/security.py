@@ -21,6 +21,9 @@ import mimetypes
 
 logger = logging.getLogger(__name__)
 
+from .threat_detection import threat_detection_service
+from .security_config import security_config
+
 # Security configuration
 MAX_REQUESTS_PER_MINUTE = 60
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -71,6 +74,36 @@ class SecurityMiddleware:
         
         # Fallback to direct connection
         return request.client.host if request.client else "unknown"
+
+    @staticmethod
+    def analyze_request(request: Request) -> None:
+        """Run ML-based threat analysis on the request."""
+        if not security_config.ENABLE_THREAT_DETECTION:
+            return
+
+        client_ip = SecurityMiddleware.get_client_ip(request)
+        session_id = request.headers.get("X-Session-ID") or request.cookies.get(
+            "session_id", "anonymous"
+        )
+        payload_size = int(request.headers.get("Content-Length") or 0)
+
+        score = threat_detection_service.analyze_request(
+            client_ip=client_ip,
+            path=request.url.path,
+            method=request.method,
+            user_agent=request.headers.get("User-Agent", ""),
+            payload_size=payload_size,
+            session_id=session_id,
+        )
+
+        if score >= security_config.THREAT_SCORE_THRESHOLD:
+            logger.warning(
+                "Blocking request from %s with high threat score %.2f", client_ip, score
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Suspicious activity detected",
+            )
     
     @staticmethod
     def validate_file_upload(file_content: bytes, filename: str, content_type: str) -> Tuple[bool, str]:
@@ -228,6 +261,8 @@ def rate_limit(max_requests: int = MAX_REQUESTS_PER_MINUTE):
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                         detail="Rate limit exceeded. Please try again later."
                     )
+                # Run ML-based threat detection
+                SecurityMiddleware.analyze_request(request)
             return await func(*args, **kwargs)
         return wrapper
     return decorator

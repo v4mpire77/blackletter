@@ -9,8 +9,8 @@
 - [ ] All files committed and pushed
 
 ### ✅ Backend Configuration
-- [ ] `backend/requirements.txt` exists with all dependencies
-- [ ] `backend/main.py` has proper CORS configuration
+- [ ] `src/backend/requirements.txt` exists with all dependencies
+- [ ] `src/backend/main.py` has proper CORS configuration
 - [ ] Health check endpoint available (`/health`)
 - [ ] Environment variables documented
 

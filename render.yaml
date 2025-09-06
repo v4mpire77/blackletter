@@ -1,53 +1,29 @@
+# Updated: 2025-08-24 - Fixed backend module path and deployment configuration
 services:
-  # Web service (Frontend)
-  - type: web
+  # Static Site (Frontend)
+  - type: static_site
     name: blackletter-frontend
-    env: node
-    buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm start
+    buildCommand: cd frontend && npm ci && npm run build
+    publishPath: ./frontend/out
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: blackletter-api
-          type: web
-          property: url
     autoDeploy: true
-    healthCheckPath: /
-    plan: free
     domains:
       - blackletter.onrender.com
 
-  # API service (Backend)
+  # API service (Backend) - No custom domain, will use auto-generated URL
   - type: web
     name: blackletter-api
-    env: python
+    runtime: python
     buildCommand: pip install -r src/backend/requirements.txt
-    startCommand: cd src && gunicorn backend.main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT
+    startCommand: cd src/backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: DATABASE_URL
-        fromDatabase:
-          name: blackletter-db
-          property: connectionString
-      - key: S3_ENDPOINT
-        value: https://s3.amazonaws.com
-      - key: S3_BUCKET
-        value: blackletter-prod
-      - key: VECTOR_PROVIDER
-        value: weaviate
-      - key: LLM_PROVIDER
-        value: openai
-      - key: S3_ACCESS_KEY
-        sync: false
-      - key: S3_SECRET_KEY
-        sync: false
+        value: 3.12.7
       - key: OPENAI_API_KEY
         sync: false
     autoDeploy: true
-    healthCheckPath: /health
     plan: free
 
 # Database

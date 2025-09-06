@@ -60,8 +60,8 @@ import {
   Key,
   RefreshCw,
   FileOutput,
-  Ban
-} from 'lucide-react';
+  Ban,
+} from 'lucide-react'; // Importing all necessary icons from lucide-react
 
 // Mock data with legal-specific content
 const recentContracts = [
@@ -78,7 +78,10 @@ const recentContracts = [
     deadline: "2024-01-20",
     aiConfidence: 94,
     redlines: 12,
-    value: "$2.4M"
+    value: "$2.4M",
+    lastActivity: "2 hours ago",
+    department: "Technology",
+    tags: ["High Value", "Fortune 500", "Multi-year"]
   },
   {
     id: 2,
@@ -93,7 +96,10 @@ const recentContracts = [
     deadline: "2024-01-16",
     aiConfidence: 98,
     redlines: 3,
-    value: "$180K"
+    value: "$180K",
+    lastActivity: "1 day ago",
+    department: "Human Resources",
+    tags: ["Remote Work", "Senior Level"]
   },
   {
     id: 3,
@@ -108,7 +114,10 @@ const recentContracts = [
     deadline: "2024-01-18",
     aiConfidence: 89,
     redlines: 23,
-    value: "$500K"
+    value: "$500K",
+    lastActivity: "30 minutes ago",
+    department: "Technology",
+    tags: ["Software", "Enterprise", "Data Processing"]
   },
   {
     id: 4,
@@ -123,7 +132,46 @@ const recentContracts = [
     deadline: "2024-01-19",
     aiConfidence: 92,
     redlines: 5,
-    value: "N/A"
+    value: "N/A",
+    lastActivity: "4 hours ago",
+    department: "Finance",
+    tags: ["Confidential", "Investment"]
+  },
+  {
+    id: 5,
+    name: "Supplier Agreement - Global Manufacturing Ltd",
+    status: "Under Review",
+    riskLevel: "medium",
+    uploadDate: "2024-01-11",
+    issues: 6,
+    type: "Supply Chain",
+    priority: "normal",
+    assignee: "Emma Wilson",
+    deadline: "2024-01-22",
+    aiConfidence: 91,
+    redlines: 8,
+    value: "$1.2M",
+    lastActivity: "6 hours ago",
+    department: "Operations",
+    tags: ["International", "Supply Chain", "Manufacturing"]
+  },
+  {
+    id: 6,
+    name: "Partnership Agreement - FinTech Startup",
+    status: "Draft",
+    riskLevel: "high",
+    uploadDate: "2024-01-10",
+    issues: 12,
+    type: "Partnership",
+    priority: "urgent",
+    assignee: "Alex Rodriguez",
+    deadline: "2024-01-17",
+    aiConfidence: 87,
+    redlines: 18,
+    value: "$3.1M",
+    lastActivity: "1 hour ago",
+    department: "Business Development",
+    tags: ["Strategic", "FinTech", "Revenue Share"]
   }
 ];
 
@@ -163,8 +211,10 @@ const stats = [
 ];
 
 // Risk level configurations
-const getRiskConfig = (level) => {
-  const configs = {
+type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+const getRiskConfig = (level: string) => {
+  const configs: Record<RiskLevel, any> = {
     low: { 
       color: 'text-green-400 bg-green-500/10 border-green-500/30',
       icon: Shield,
@@ -190,11 +240,13 @@ const getRiskConfig = (level) => {
       glow: 'shadow-red-500/20'
     }
   };
-  return configs[level] || configs.medium;
+  return configs[level as RiskLevel] || configs.medium;
 };
 
-const getStatusConfig = (status) => {
-  const configs = {
+type StatusType = "Under Review" | "Approved" | "Needs Attention" | "Processing";
+
+const getStatusConfig = (status: string) => {
+  const configs: Record<StatusType, any> = {
     "Under Review": { 
       color: 'text-blue-400 bg-blue-500/10 border-blue-500/30', 
       icon: Clock,
@@ -216,11 +268,11 @@ const getStatusConfig = (status) => {
       glow: 'shadow-purple-500/20'
     }
   };
-  return configs[status] || configs["Under Review"];
+  return configs[status as StatusType] || configs["Under Review"];
 };
 
 // Components
-const StatCard = ({ stat }) => {
+const StatCard = ({ stat }: { stat: any }) => {
   const Icon = stat.icon;
   
   return (
@@ -245,7 +297,7 @@ const StatCard = ({ stat }) => {
   );
 };
 
-const ContractCard = ({ contract, onSelect }) => {
+const ContractCard = ({ contract, onSelect }: { contract: any; onSelect: (contract: any) => void }) => {
   const riskConfig = getRiskConfig(contract.riskLevel);
   const statusConfig = getStatusConfig(contract.status);
   const RiskIcon = riskConfig.icon;
@@ -322,7 +374,7 @@ const ContractCard = ({ contract, onSelect }) => {
   );
 };
 
-const UploadArea = ({ onUpload }) => {
+const UploadArea = ({ onUpload }: { onUpload: (files: File[]) => void }) => {
   const [dragOver, setDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -342,7 +394,7 @@ const UploadArea = ({ onUpload }) => {
     }, 1000);
   };
 
-  const handleDrop = async (e) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files);
@@ -390,7 +442,7 @@ const UploadArea = ({ onUpload }) => {
           : 'border-gray-700 hover:border-gray-600 bg-gray-900/20 hover:scale-105'
       }`}
       onDrop={handleDrop}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragOver={(e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onClick={handleClick}
     >
@@ -413,7 +465,7 @@ const UploadArea = ({ onUpload }) => {
   );
 };
 
-const Sidebar = ({ activeTab, setActiveTab }) => {
+const Sidebar = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: string) => void }) => {
   const navigation = [
     { name: 'Dashboard', icon: BarChart3, key: 'dashboard' },
     { name: 'Contracts', icon: FileSignature, key: 'contracts' },
@@ -488,9 +540,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   );
 };
 
-const Header = ({ activeTab }) => {
-  const getPageTitle = (tab) => {
-    const titles = {
+const Header = ({ activeTab }: { activeTab: string }) => {
+  const getPageTitle = (tab: string) => {
+    const titles: Record<string, string> = {
       dashboard: 'Dashboard',
       contracts: 'Contract Management',
       queue: 'Review Queue',
@@ -884,7 +936,7 @@ const UKLegalContent = () => {
   );
 };
 
-const DashboardContent = ({ onUpload, onContractSelect }) => (
+const DashboardContent = ({ onUpload, onContractSelect, searchQuery }: { onUpload: (files: File[]) => void; onContractSelect: (contract: any) => void; searchQuery: string }) => (
   <div className="space-y-8">
     {/* Quick Actions Bar */}
     <div className="flex items-center justify-between p-6 bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-800/50">
@@ -988,8 +1040,84 @@ const DashboardContent = ({ onUpload, onContractSelect }) => (
   </div>
 );
 
+// Review Queue Component
+const ReviewQueueContent = ({ onContractSelect, searchQuery }: { onContractSelect: (contract: any) => void, searchQuery: string }) => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <h2 className="text-xl font-bold text-white">Review Queue</h2>
+      <div className="flex items-center space-x-3">
+        <button className="inline-flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors">
+          <Clock className="w-4 h-4 mr-2" />
+          View All Pending
+        </button>
+      </div>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {recentContracts
+        .filter(contract => contract.status === "Under Review" || contract.status === "Needs Attention")
+        .map((contract, index) => (
+          <ContractCard key={`queue-${contract.id}-${index}`} contract={contract} onSelect={onContractSelect} />
+        ))}
+    </div>
+  </div>
+);
+
+// AI Insights Component
+const AIInsightsContent = () => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <h2 className="text-xl font-bold text-white">AI Insights & Analytics</h2>
+      <div className="flex items-center space-x-3">
+        <button className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+          <BarChart3 className="w-4 h-4 mr-2" />
+          Export Report
+        </button>
+      </div>
+    </div>
+    
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
+        <h3 className="text-lg font-semibold text-white mb-4">Risk Trends</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">High Risk Contracts</span>
+            <span className="text-red-400 font-semibold">+12%</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">GDPR Compliance</span>
+            <span className="text-green-400 font-semibold">-8%</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">Data Processing</span>
+            <span className="text-yellow-400 font-semibold">+5%</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
+        <h3 className="text-lg font-semibold text-white mb-4">AI Performance</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">Accuracy Rate</span>
+            <span className="text-green-400 font-semibold">94.2%</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">Processing Time</span>
+            <span className="text-blue-400 font-semibold">2.1 min</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">Issues Detected</span>
+            <span className="text-orange-400 font-semibold">1,247</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 // All other components continue as before...
-const ContractsContent = ({ onContractSelect }) => (
+const ContractsContent = ({ onContractSelect, searchQuery }: { onContractSelect: (contract: any) => void; searchQuery: string }) => (
   <div className="space-y-6">
     <div className="flex items-center justify-between">
       <h2 className="text-xl font-bold text-white">Contract Repository</h2>
@@ -1012,34 +1140,63 @@ const ContractsContent = ({ onContractSelect }) => (
 // Main App Component
 export default function BlackletterApp() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notifications] = useState([]);
 
-  const handleUpload = (files) => {
+  const handleUpload = (files: File[]) => {
     console.log('Uploading files:', files);
-    alert(`${files.length} file(s) uploaded to Blackletter Systems!`);
+    // Simulate upload success with more detailed feedback
+    const fileNames = files.map(f => f.name).join(', ');
+    alert(`✅ Successfully uploaded ${files.length} file(s): ${fileNames}\n\n🤖 AI analysis has been initiated and will be available in ~2 minutes.\n\n📧 You'll receive a notification when processing is complete.`);
   };
 
-  const handleContractSelect = (contract) => {
+  const handleContractSelect = (contract: any) => {
     console.log('Contract selected:', contract);
-    alert(`Opening contract: ${contract.name}`);
+    // Simulate opening contract details with more context
+    alert(`📄 Opening Contract Details\n\n` +
+          `Contract: ${contract.name}\n` +
+          `Status: ${contract.status}\n` +
+          `Risk Level: ${contract.riskLevel.toUpperCase()}\n` +
+          `AI Confidence: ${contract.aiConfidence}%\n` +
+          `Issues Found: ${contract.issues}\n` +
+          `Assigned to: ${contract.assignee}\n\n` +
+          `⚡ Quick Actions Available:\n` +
+          `• Review redlines (${contract.redlines})\n` +
+          `• Send for approval\n` +
+          `• Export to PDF\n` +
+          `• Schedule meeting`);
   };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardContent onUpload={handleUpload} onContractSelect={handleContractSelect} />;
+        return <DashboardContent onUpload={handleUpload} onContractSelect={handleContractSelect} searchQuery={searchQuery} />;
       case 'contracts':
-        return <ContractsContent onContractSelect={handleContractSelect} />;
+        return <ContractsContent onContractSelect={handleContractSelect} searchQuery={searchQuery} />;
       case 'gdpr':
         return <GDPRContent />;
       case 'uk-legal':
         return <UKLegalContent />;
+      case 'queue':
+        return <ReviewQueueContent onContractSelect={handleContractSelect} searchQuery={searchQuery} />;
+      case 'insights':
+        return <AIInsightsContent />;
       default:
-        return <DashboardContent onUpload={handleUpload} onContractSelect={handleContractSelect} />;
+        return <DashboardContent onUpload={handleUpload} onContractSelect={handleContractSelect} searchQuery={searchQuery} />;
     }
   };
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      // This would normally handle closing dropdowns, but for demo purposes we'll keep it simple
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black flex overflow-hidden">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="flex-1 flex flex-col">

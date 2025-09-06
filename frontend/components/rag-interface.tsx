@@ -622,7 +622,7 @@ export const RAGInterface: React.FC<RAGInterfaceProps> = ({
                 <label className="text-sm font-medium">Search Query</label>
                 <Input
                   value={query}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setQuery(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
                   placeholder="e.g., liability clause, payment terms"
                 />
               </div>

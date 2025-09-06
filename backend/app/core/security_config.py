@@ -73,10 +73,16 @@ class SecurityConfig:
     # Input Validation
     MAX_INPUT_LENGTH = int(os.getenv("MAX_INPUT_LENGTH", "1000"))
     MAX_QUERY_LENGTH = int(os.getenv("MAX_QUERY_LENGTH", "500"))
-    
+
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_SECURITY_EVENTS = os.getenv("LOG_SECURITY_EVENTS", "true").lower() == "true"
+
+    # Threat Detection
+    ENABLE_THREAT_DETECTION = os.getenv(
+        "ENABLE_THREAT_DETECTION", "true"
+    ).lower() == "true"
+    THREAT_SCORE_THRESHOLD = float(os.getenv("THREAT_SCORE_THRESHOLD", "0.7"))
     
     # Monitoring
     ENABLE_METRICS = os.getenv("ENABLE_METRICS", "true").lower() == "true"
@@ -113,3 +119,4 @@ class SecurityConfig:
 
 # Global security configuration instance
 security_config = SecurityConfig()
+

@@ -1,20 +1,12 @@
 import traceback
- codex/find-and-fix-important-bug
-import sys
- main
 
-try:
-    from rag.eval import evaluate
-    evaluate.main()
- codex/find-and-fix-important-bug
-except SystemExit as e:
-    print(f"SystemExit: code={e.code}")
-    sys.exit(e.code)
-except Exception:
-    traceback.print_exc()
-    sys.exit(2)
+from rag.eval import evaluate
 
-except Exception:
-    traceback.print_exc()
-    raise
- main
+
+if __name__ == "__main__":
+    try:
+        evaluate.main()
+    except Exception:
+        traceback.print_exc()
+        raise
+

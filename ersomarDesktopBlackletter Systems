@@ -1,0 +1,7 @@
+.cursorrules
+docs/REPOSITORY_AUDIT_AND_NEXT_STEPS.md
+frontend/app/dashboard/page.tsx
+frontend/app/page.tsx
+frontend/app/upload/page.tsx
+frontend/components/blackletter-app.tsx
+frontend/contexts/AuthContext.tsx

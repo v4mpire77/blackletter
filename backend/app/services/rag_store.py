@@ -75,7 +75,15 @@ class RAGStore:
             start = max(start + 1, end - overlap)
             
         return chunks
-    
+
+    async def store_document(self, doc_id: str, text: str, metadata: Dict[str, Any]) -> List[TextChunk]:
+        """Chunk the provided text and store placeholder embeddings."""
+        chunks = self.chunk_text(text, doc_id)
+        # Use zero vectors as placeholder embeddings for testing
+        zero_embeddings = [[0.0] * self.embedding_dim for _ in chunks]
+        self.embed_chunks(chunks, zero_embeddings)
+        return chunks
+
     def embed_chunks(self, chunks: List[TextChunk], embeddings: List[List[float]]) -> None:
         """
         Store embeddings for text chunks.
@@ -118,6 +126,15 @@ class RAGStore:
         # Sort by similarity and return top-k
         similarities.sort(key=lambda x: x[1], reverse=True)
         return similarities[:top_k]
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Return basic statistics about the stored chunks and documents."""
+        doc_ids = {chunk.doc_id for chunk in self.chunks.values()}
+        return {
+            "total_chunks": len(self.chunks),
+            "total_documents": len(doc_ids),
+            "document_ids": list(doc_ids),
+        }
     
     def get_context_around_chunk(self, chunk_id: str, context_chunks: int = 2) -> str:
         """
@@ -179,3 +196,7 @@ class RAGStore:
             del self.chunks[chunk_id]
             if chunk_id in self.embeddings:
                 del self.embeddings[chunk_id]
+
+
+# Global instance used across the application
+rag_store = RAGStore()
